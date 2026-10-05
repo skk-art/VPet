@@ -353,21 +353,30 @@ namespace VPet_Simulator.Core
         /// <summary>
         /// 显示拖拽情况
         /// </summary>
-        public void DisplayRaised()
+        /// <param name="freeDrag">自由抓取模式: 全身任意点长按触发, 以抓取位置为锚点跟随鼠标, 不对齐RaisePoint不跳变</param>
+        public void DisplayRaised(bool freeDrag = false)
         {
             //位置迁移: 254-128           
             MainGrid.MouseMove -= MainGrid_MouseWave;
             MainGrid.MouseMove -= MainGrid_MouseMove;
             MainGrid.MouseMove += MainGrid_MouseMove;
 
-            var mp = Dispatcher.Invoke(() => Mouse.GetPosition(MainGrid));
-            var x = mp.X - Core.Graph!.GraphConfig.RaisePoint[(int)Core.Save!.Mode].X;
-            var y = mp.Y - Core.Graph!.GraphConfig.RaisePoint[(int)Core.Save!.Mode].Y;
-            if (Math.Abs(x) < 1)
-                x = 0;
-            if (Math.Abs(y) < 1)
-                y = 0;
-            Core.Controller!.MoveWindows(x, y);
+            IsFreeDrag = freeDrag;
+            if (freeDrag)
+            {//自由抓取: 锚定为当前鼠标位置, 起手无位移
+                FreeDragAnchor = Dispatcher.Invoke(() => Mouse.GetPosition(MainGrid));
+            }
+            else
+            {//设计抓取: 将RaisePoint对齐到鼠标位置
+                var mp = Dispatcher.Invoke(() => Mouse.GetPosition(MainGrid));
+                var x = mp.X - Core.Graph!.GraphConfig.RaisePoint[(int)Core.Save!.Mode].X;
+                var y = mp.Y - Core.Graph!.GraphConfig.RaisePoint[(int)Core.Save!.Mode].Y;
+                if (Math.Abs(x) < 1)
+                    x = 0;
+                if (Math.Abs(y) < 1)
+                    y = 0;
+                Core.Controller!.MoveWindows(x, y);
+            }
             rasetype = 0;
             DisplayRaising();
         }
