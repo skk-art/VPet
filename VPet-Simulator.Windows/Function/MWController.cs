@@ -97,7 +97,37 @@ namespace VPet_Simulator.Windows
             {
                 mw.Left += X * ZoomRatio;
                 mw.Top += Y * ZoomRatio;
+                ClampWindowToScreen();
             });
+        }
+
+        /// <summary>
+        /// 防止移动/拖拽/工作动画把桌宠完全移出屏幕外导致找不到
+        /// (保留至少40dip可见边缘, 贴边趴伏等特性不受影响)
+        /// </summary>
+        private void ClampWindowToScreen()
+        {
+            try
+            {
+                double width = mw.ActualWidth > 0 ? mw.ActualWidth : mw.Width;
+                double height = mw.ActualHeight > 0 ? mw.ActualHeight : mw.Height;
+                if (width <= 0 || height <= 0)
+                    return;
+                double minX = IsPrimaryScreen ? 0 : ScreenBorder.X;
+                double minY = IsPrimaryScreen ? 0 : ScreenBorder.Y;
+                double maxX = IsPrimaryScreen ? SystemParameters.PrimaryScreenWidth : ScreenBorder.X + ScreenBorder.Width;
+                double maxY = IsPrimaryScreen ? SystemParameters.PrimaryScreenHeight : ScreenBorder.Y + ScreenBorder.Height;
+                const double MinVisible = 60;
+                if (mw.Left > maxX - MinVisible)
+                    mw.Left = maxX - MinVisible;
+                if (mw.Left + width < minX + MinVisible)
+                    mw.Left = minX + MinVisible - width;
+                if (mw.Top > maxY - MinVisible)
+                    mw.Top = maxY - MinVisible;
+                if (mw.Top + height < minY + MinVisible)
+                    mw.Top = minY + MinVisible - height;
+            }
+            catch { }
         }
 
         public bool IfInActivateScreen()

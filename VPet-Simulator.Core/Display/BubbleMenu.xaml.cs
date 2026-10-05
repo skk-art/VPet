@@ -34,7 +34,7 @@ namespace VPet_Simulator.Core
         {
             InitializeComponent();
             this.m = m;
-            CloseTimer = new Timer(5000)
+            CloseTimer = new Timer(8000)
             {
                 AutoReset = false,
                 Enabled = false
@@ -55,7 +55,8 @@ namespace VPet_Simulator.Core
             closing = false;
             CloseTimer.Stop();
             CloseTimer.Start();
-            Panel.SetZIndex(this, m.UIGrid.Children.Count);
+            Panel.SetZIndex(this, 1000);
+            m.MsgBar?.ForceClose();
             //自定气泡: 仅当工具栏的自定菜单已注册菜单项时显示
             if (m.ToolBar != null && m.ToolBar.MenuDIY.Visibility == Visibility.Visible && m.ToolBar.MenuDIY.HasItems)
                 BubDIY.Visibility = Visibility.Visible;

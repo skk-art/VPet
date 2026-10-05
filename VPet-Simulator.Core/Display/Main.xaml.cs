@@ -66,11 +66,11 @@ namespace VPet_Simulator.Core
                 ToolBar = new ToolBar(this);
                 ToolBar.Visibility = Visibility.Collapsed;
                 UIGrid.Children.Add(ToolBar);
-                BubbleMenu = new BubbleMenu(this);
-                UIGrid.Children.Add(BubbleMenu);
                 MsgBar = new MessageBar(this);
                 MsgBar.Visibility = Visibility.Collapsed;
                 UIGrid.Children.Add(MsgBar.This);
+                BubbleMenu = new BubbleMenu(this);
+                UIGrid.Children.Add(BubbleMenu);
             });
         }
         public void Load_3_BindingTimer()
