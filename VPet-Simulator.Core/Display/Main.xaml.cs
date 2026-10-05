@@ -26,6 +26,10 @@ namespace VPet_Simulator.Core
         /// </summary>
         public ToolBar ToolBar = null!;
         /// <summary>
+        /// 右键气泡式交互菜单
+        /// </summary>
+        public BubbleMenu? BubbleMenu;
+        /// <summary>
         /// 消息栏
         /// </summary>
         public IMassageBar MsgBar = null!;
@@ -62,6 +66,8 @@ namespace VPet_Simulator.Core
                 ToolBar = new ToolBar(this);
                 ToolBar.Visibility = Visibility.Collapsed;
                 UIGrid.Children.Add(ToolBar);
+                BubbleMenu = new BubbleMenu(this);
+                UIGrid.Children.Add(BubbleMenu);
                 MsgBar = new MessageBar(this);
                 MsgBar.Visibility = Visibility.Collapsed;
                 UIGrid.Children.Add(MsgBar.This);
@@ -407,6 +413,7 @@ namespace VPet_Simulator.Core
         {
             isPress = true;
             CountNomal = 0;
+            BubbleMenu?.Hide();
             Task.Run(() =>
             {
                 var pth = DateTime.Now.Ticks;
@@ -513,13 +520,17 @@ namespace VPet_Simulator.Core
 
         private void MainGrid_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (BubbleMenu != null && BubbleMenu.IsOpen)
+            {//再次右键: 收起气泡菜单
+                BubbleMenu.Hide();
+                return;
+            }
             if (ToolBar?.Visibility == Visibility.Visible)
             {
                 ToolBar.CloseTimer.Enabled = false;
                 ToolBar.Visibility = Visibility.Collapsed;
             }
-            else
-                ToolBar?.Show();
+            BubbleMenu?.Show();
         }
 
         public void Dispose()

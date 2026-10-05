@@ -417,6 +417,16 @@ namespace VPet_Simulator.Core
         /// </summary>
         public event Action? EventMenuPanelShow;
 
+        /// <summary>
+        /// 显示桌宠状态面板 (与悬停"面板"一致)
+        /// </summary>
+        public void ShowPanel()
+        {
+            BdrPanel.Visibility = Visibility.Visible;
+            M_TimeUIHandle(m);
+            EventMenuPanelShow?.Invoke();
+        }
+
         private void MenuPanel_MouseEnter(object sender, MouseEventArgs e)
         {
             BdrPanel.Visibility = Visibility.Visible;
