@@ -256,6 +256,14 @@ namespace VPet_Simulator.Core
             /// </summary>
             public Size TouchBodySize;
             /// <summary>
+            /// 触碰腿部触发位置 (默认为摸身体区域正下方)
+            /// </summary>
+            public Point TouchLegsLocate;
+            /// <summary>
+            /// 触碰腿部触发大小
+            /// </summary>
+            public Size TouchLegsSize;
+            /// <summary>
             /// 提起触发大小
             /// </summary>
             public Size[] TouchRaisedSize;
@@ -306,6 +314,14 @@ namespace VPet_Simulator.Core
                 TouchHeadSize = new Size(lps["touchhead"][(gdbe)"sw"], lps["touchhead"][(gdbe)"sh"]);
                 TouchBodyLocate = new Point(lps["touchbody"][(gdbe)"px"], lps["touchbody"][(gdbe)"py"]);
                 TouchBodySize = new Size(lps["touchbody"][(gdbe)"sw"], lps["touchbody"][(gdbe)"sh"]);
+                //腿部触碰区域: 默认取摸身体区域正下方至底部; MOD可通过 touchlegs 自定义
+                TouchLegsLocate = new Point(TouchBodyLocate.X, TouchBodyLocate.Y + TouchBodySize.Height);
+                TouchLegsSize = new Size(TouchBodySize.Width, Math.Max(30, 480 - TouchLegsLocate.Y));
+                if (lps.FindLine("touchlegs") != null && lps["touchlegs"][(gdbe)"sh"] != 0)
+                {
+                    TouchLegsLocate = new Point(lps["touchlegs"][(gdbe)"px"], lps["touchlegs"][(gdbe)"py"]);
+                    TouchLegsSize = new Size(lps["touchlegs"][(gdbe)"sw"], lps["touchlegs"][(gdbe)"sh"]);
+                }
                 TouchRaisedLocate = new Point[] {
                     new Point(lps["touchraised"][(gdbe)"happy_px"], lps["touchraised"][(gdbe)"happy_py"]),
                     new Point(lps["touchraised"][(gdbe)"nomal_px"], lps["touchraised"][(gdbe)"nomal_py"]),
@@ -355,6 +371,11 @@ namespace VPet_Simulator.Core
                 {
                     TouchBodyLocate = new Point(lps["touchbody"][(gdbe)"px"], lps["touchbody"][(gdbe)"py"]);
                     TouchBodySize = new Size(lps["touchbody"][(gdbe)"sw"], lps["touchbody"][(gdbe)"sh"]);
+                }
+                if (lps.FindLine("touchlegs") != null && lps["touchlegs"][(gdbe)"sh"] != 0)
+                {
+                    TouchLegsLocate = new Point(lps["touchlegs"][(gdbe)"px"], lps["touchlegs"][(gdbe)"py"]);
+                    TouchLegsSize = new Size(lps["touchlegs"][(gdbe)"sw"], lps["touchlegs"][(gdbe)"sh"]);
                 }
 
                 if (lps.FindLine("touchraised") != null)

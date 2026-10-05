@@ -74,6 +74,10 @@ namespace VPet_Simulator.Core
         /// </summary>
         public Action DisplayTouchBody { get; set; }
         /// <summary>
+        /// 显示触碰腿部情况
+        /// </summary>
+        public Action DisplayTouchLegs { get; set; }
+        /// <summary>
         /// 显示默认动画
         /// </summary>
         public void DisplayDefault()
@@ -205,6 +209,42 @@ namespace VPet_Simulator.Core
             Display(GraphType.Touch_Body, AnimatType.A_Start, (graphname) =>
              Display(graphname, AnimatType.B_Loop, (graphname) =>
              DisplayCEndtoNomal(graphname)));
+        }
+        /// <summary>
+        /// 当发生触碰腿部时触发改方法
+        /// </summary>
+        public event Action? Event_TouchLegs;
+        /// <summary>
+        /// 显示触碰腿部情况
+        /// </summary>
+        public void DisplayToTouchLegs()
+        {
+            CountNomal = 0;
+            if (Core.Controller!.EnableFunction && Core.Save!.Strength >= 10 && Core.Save!.Feeling < Core.Save!.FeelingMax)
+            {
+                Core.Save!.StrengthChange(-2);
+                Core.Save!.FeelingChange(1);
+                Core.Save!.Mode = Core.Save!.CalMode();
+                LabelDisplayShowChangeNumber(LocalizeCore.Translate("体力-{0:f0} 心情+{1:f0}"), 2, 1);
+            }
+            Event_TouchLegs?.Invoke();
+            //优先播放MOD提供的 touch_legs 动画; 其次用捏脸(pinch)动画作为腿部触碰反应; 均无则退回摸身体
+            if (Core.Graph!.FindGraphs("touch_legs", AnimatType.A_Start, Core.Save!.Mode)?.Count > 0)
+            {
+                Display("touch_legs", AnimatType.A_Start, (graphname) =>
+                 Display(graphname, AnimatType.B_Loop, (graphname) =>
+                 DisplayCEndtoNomal(graphname)));
+            }
+            else if (Core.Graph!.FindGraphs("pinch", AnimatType.A_Start, Core.Save!.Mode)?.Count > 0)
+            {
+                Display("pinch", AnimatType.A_Start, (graphname) =>
+                 Display(graphname, AnimatType.B_Loop, (graphname) =>
+                 DisplayCEndtoNomal(graphname)));
+            }
+            else
+            {
+                DisplayToTouchBody();
+            }
         }
         /// <summary>
         /// 显示待机(模式1)情况

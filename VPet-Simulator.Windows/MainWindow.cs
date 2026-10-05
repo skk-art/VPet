@@ -2344,6 +2344,7 @@ namespace VPet_Simulator.Windows
                   Main.SayProcess.Add(Main_OnSay);
                   Main.Event_TouchHead += Main_Event_TouchHead;
                   Main.Event_TouchBody += Main_Event_TouchBody;
+                  Main.Event_TouchLegs += Main_Event_TouchLegs;
 
                   HashCheck = HashCheck;
 

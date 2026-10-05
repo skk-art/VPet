@@ -782,6 +782,11 @@ namespace VPet_Simulator.Windows
             GameSavesData.Statistics![(gint)"stat_touch_head"]++;
         }
 
+        private void Main_Event_TouchLegs()
+        {
+            GameSavesData.Statistics![(gint)"stat_touch_legs"]++;
+        }
+
         private void Main_OnSay(SayInfo obj)
         {
             GameSavesData.Statistics![(gint)"stat_say_times"]++;

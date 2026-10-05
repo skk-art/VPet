@@ -217,6 +217,7 @@ namespace VPet_Simulator.Core
             DisplayIdel_StateONE = DisplayToIdel_StateONE;
             DisplayTouchBody = DisplayToTouchBody;
             DisplayTouchHead = DisplayToTouchHead;
+            DisplayTouchLegs = DisplayToTouchLegs;
 
             SayRndFunction = new Func<string, string>((x) => Core.Graph!.FindName(GraphType.Say) ?? Core.Graph!.FindName(GraphType.Default) ?? "");
 
@@ -285,6 +286,7 @@ namespace VPet_Simulator.Core
             }));
             Core.TouchEvent.Add(new TouchArea(Core.Graph!.GraphConfig.TouchHeadLocate, Core.Graph!.GraphConfig.TouchHeadSize, () => { DisplayTouchHead(); return true; }));
             Core.TouchEvent.Add(new TouchArea(Core.Graph!.GraphConfig.TouchBodyLocate, Core.Graph!.GraphConfig.TouchBodySize, () => { DisplayTouchBody(); return true; }));
+            Core.TouchEvent.Add(new TouchArea(Core.Graph!.GraphConfig.TouchLegsLocate, Core.Graph!.GraphConfig.TouchLegsSize, () => { DisplayTouchLegs(); return true; }));
             for (int i = 0; i < 4; i++)
             {
                 IGameSave.ModeType m = (IGameSave.ModeType)i;
@@ -542,11 +544,10 @@ namespace VPet_Simulator.Core
             MainGrid.MouseMove -= MainGrid_MouseMove;
             MainGrid.MouseMove += MainGrid_MouseWave;
         }
-        private int wavetimes = 0;
-        private int switchcount = 0;
-        private bool? waveleft = null;
-        private bool? wavetop = null;
-        private DateTime wavespan;
+        /// <summary>
+        /// 挂机触碰冷却: 触发一次触碰动画后需间隔该时长才能再次触发
+        /// </summary>
+        private DateTime lastHoverTouch = DateTime.MinValue;
         private void MainGrid_MouseWave(object sender, MouseEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Pressed)
@@ -555,67 +556,29 @@ namespace VPet_Simulator.Core
             if (rasetype >= 0 || State != WorkingState.Nomal)
                 return;
 
-            if ((DateTime.Now - wavespan).TotalSeconds > 2)
-            {
-                wavetimes = 0;
-                switchcount = 0;
-                waveleft = null;
-                wavetop = null;
-            }
-            wavespan = DateTime.Now;
-            bool active = false;
+            //挂机触碰: 光标接触到头部/腰部/腿部时直接触发对应触碰动画 (带冷却, 防止持续刷屏)
+            if ((DateTime.Now - lastHoverTouch).TotalSeconds < 3)
+                return;
             var p = e.GetPosition(MainGrid);
-
-            if (p.Y < 200)
+            var cfg = Core.Graph!.GraphConfig;
+            LastInteractionTime = DateTime.Now;
+            if (p.X >= cfg.TouchHeadLocate.X && p.X <= cfg.TouchHeadLocate.X + cfg.TouchHeadSize.Width
+                && p.Y >= cfg.TouchHeadLocate.Y && p.Y <= cfg.TouchHeadLocate.Y + cfg.TouchHeadSize.Height)
             {
-                if (wavetop != false)
-                    wavetop = true;
-                else
-                {
-                    if (switchcount++ > 150)
-                        wavespan = DateTime.MinValue;
-                    return;
-                }
+                lastHoverTouch = DateTime.Now;
+                DisplayTouchHead();
             }
-            else
+            else if (p.X >= cfg.TouchBodyLocate.X && p.X <= cfg.TouchBodyLocate.X + cfg.TouchBodySize.Width
+                && p.Y >= cfg.TouchBodyLocate.Y && p.Y <= cfg.TouchBodyLocate.Y + cfg.TouchBodySize.Height)
             {
-                if (wavetop != true)
-                    wavetop = false;
-                else
-                {
-                    if (switchcount++ > 150)
-                        wavespan = DateTime.MinValue;
-                    return;
-                }
+                lastHoverTouch = DateTime.Now;
+                DisplayTouchBody();
             }
-
-            if (p.X < 200 && waveleft != true)
+            else if (p.X >= cfg.TouchLegsLocate.X && p.X <= cfg.TouchLegsLocate.X + cfg.TouchLegsSize.Width
+                && p.Y >= cfg.TouchLegsLocate.Y && p.Y <= cfg.TouchLegsLocate.Y + cfg.TouchLegsSize.Height)
             {
-                waveleft = true;
-                active = true;
-            }
-            if (p.X > 300 && waveleft != false)
-            {
-                active = true;
-                waveleft = false;
-            }
-
-            if (active)
-            {
-                if (wavetimes++ > 4)
-                    if (wavetop == true)
-                    {
-                        if (wavetimes >= 10 || IsIdel || DisplayType.Type == GraphType.Touch_Head)
-                            DisplayTouchHead();
-                        //Console.WriteLine(wavetimes);
-                        LastInteractionTime = DateTime.Now;
-                    }
-                    else
-                    {
-                        if (wavetimes >= 10 || IsIdel || DisplayType.Type == GraphType.Touch_Body)
-                            DisplayTouchBody();
-                        LastInteractionTime = DateTime.Now;
-                    }
+                lastHoverTouch = DateTime.Now;
+                DisplayTouchLegs();
             }
         }
 
