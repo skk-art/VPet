@@ -430,12 +430,12 @@ namespace VPet_Simulator.Core
                         if (x.IsPress == true && x.Touch(mp) && x.DoAction())
                             return;
                     }
-                    //全身任意点长按均可拖动 (自由抓取模式, 锚点为抓取位置, 不对齐RaisePoint不跳变)
+                    //全身任意点长按均可拖动 (抓取点跟随模式, 不对齐RaisePoint不跳变)
                     //若插件注册了默认长按事件则优先调用
                     if (DefaultPressAction != null)
                         DefaultPressAction?.Invoke();
                     else
-                        DisplayRaised(true);
+                        DisplayRaised();
                 }
                 else
                 {//历遍点击事件
@@ -457,18 +457,13 @@ namespace VPet_Simulator.Core
             });
         }
         /// <summary>
-        /// 自由拖拽锚点 (MainGrid设计坐标): 长按抓取的位置, 拖动时桌宠跟随鼠标而不跳变
+        /// 拖拽锚点 (MainGrid设计坐标): 拖动时桌宠与该位置保持一致, 实现与光标1:1同步
         /// </summary>
-        private Point FreeDragAnchor;
-        /// <summary>
-        /// 当前拖拽是否为自由抓取模式 (全身任意点长按触发, 锚点为抓取位置而非RaisePoint)
-        /// </summary>
-        public bool IsFreeDrag { get; private set; } = false;
+        private Point DragAnchor;
 
         private void MainGrid_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
         {
             isPress = false;
-            IsFreeDrag = false;
             if (DisplayType.Type.ToString().StartsWith("Raised"))
             {
                 MainGrid.MouseMove -= MainGrid_MouseWave;
@@ -505,10 +500,9 @@ namespace VPet_Simulator.Core
                 return;
             }
             var mp = e.GetPosition(MainGrid);
-            //自由拖拽时以抓取点为锚点, 否则对齐动画设计的RaisePoint
-            var anchor = IsFreeDrag ? FreeDragAnchor : Core.Graph!.GraphConfig.RaisePoint[(int)Core.Save!.Mode];
-            var x = mp.X - anchor.X;
-            var y = mp.Y - anchor.Y;
+            //抓取点跟随: 光标移动多少, 桌宠跟多少 (1:1同步)
+            var x = mp.X - DragAnchor.X;
+            var y = mp.Y - DragAnchor.Y;
             if (Math.Abs(x) < 1)
                 x = 0;
             if (Math.Abs(y) < 1)
@@ -550,7 +544,6 @@ namespace VPet_Simulator.Core
         public void CleanState()
         {
             MoveTimer.Enabled = false;
-            IsFreeDrag = false;
             MainGrid.MouseMove -= MainGrid_MouseWave;
             MainGrid.MouseMove -= MainGrid_MouseMove;
             MainGrid.MouseMove += MainGrid_MouseWave;
