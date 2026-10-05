@@ -1,0 +1,203 @@
+﻿<pu:WindowX
+  x:Class="VPet.Solution.Views.SettingEditor.SettingWindow"
+  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:ll="clr-namespace:LinePutScript.Localization.WPF;assembly=LinePutScript.Localization.WPF"
+  xmlns:local="clr-namespace:VPet.Solution"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:pu="https://opensource.panuon.com/wpf-ui"
+  xmlns:system="clr-namespace:System;assembly=mscorlib"
+  xmlns:vm="clr-namespace:VPet.Solution.ViewModels.SettingEditor"
+  xmlns:m="clr-namespace:VPet.Solution.Models.SettingEditor"
+  d:DataContext="{d:DesignInstance Type=vm:SettingViewModel}"
+  Title="{ll:Str 'VPET 设置编辑器'}"
+  Width="1000"
+  Height="600"
+  MinWidth="400"
+  MinHeight="200"
+  WindowStartupLocation="CenterScreen"
+  mc:Ignorable="d"
+>
+  <Window.Resources>
+    <Style x:Key="RemindStyle" BasedOn="{StaticResource Button_BaseStyle}" TargetType="Button">
+      <Style.Triggers>
+        <DataTrigger
+          Binding="{Binding Tag, RelativeSource={RelativeSource Mode=Self}}"
+          Value="True"
+        >
+          <DataTrigger.EnterActions>
+            <BeginStoryboard x:Name="RemindSaveStoryboard">
+              <Storyboard RepeatBehavior="Forever">
+                <ColorAnimationUsingKeyFrames Storyboard.TargetProperty="Background.Color">
+                  <DiscreteColorKeyFrame KeyTime="0:0:1" Value="Aqua" />
+                  <DiscreteColorKeyFrame KeyTime="0:0:1.5" Value="#00FFFFFF" />
+                </ColorAnimationUsingKeyFrames>
+              </Storyboard>
+            </BeginStoryboard>
+          </DataTrigger.EnterActions>
+          <DataTrigger.ExitActions>
+            <RemoveStoryboard BeginStoryboardName="RemindSaveStoryboard" />
+          </DataTrigger.ExitActions>
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+  </Window.Resources>
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="200" />
+      <ColumnDefinition Width="Auto" />
+      <ColumnDefinition />
+    </Grid.ColumnDefinitions>
+    <Grid Margin="10">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+      <Label
+        Margin="0"
+        Content="{ll:Str 存档文件}"
+        FontSize="16"
+        FontWeight="Bold"
+        Style="{DynamicResource Label_BaseStyle}"
+      />
+      <TextBox
+        Grid.Row="1"
+        x:Name="SearchSetting"
+        pu:TextBoxHelper.Watermark="{ll:Str 搜索文件}"
+        Style="{DynamicResource StandardTextBoxStyle}"
+        Text="{Binding SearchSetting, UpdateSourceTrigger=PropertyChanged}"
+      />
+      <ListBox
+        x:Name="Settings"
+        Grid.Row="2"
+        d:ItemsSource="{d:SampleData ItemCount=5}"
+        SelectionChanged="Settings_SelectionChanged"
+        Style="{DynamicResource SideMenuListBoxStyle}"
+        ItemsSource="{Binding Settings.FilteredList}"
+        SelectedItem="{Binding CurrentSetting}"
+      >
+        <ListBox.ItemContainerStyle>
+          <Style BasedOn="{StaticResource {x:Type ListBoxItem}}" TargetType="ListBoxItem">
+            <Setter
+              Property="Tag"
+              Value="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ListBox}}"
+            />
+            <Setter Property="Content" Value="{Binding Name}" />
+            <Setter Property="ToolTip" Value="{Binding FilePath}" />
+            <Setter Property="ContextMenu">
+              <Setter.Value>
+                <ContextMenu>
+                  <MenuItem
+                    x:Name="SaveAllSetting"
+                    Header="{ll:Str 打开文件}"
+                    Command="{Binding PlacementTarget.Tag.OpenFileCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                    CommandParameter="{Binding}"
+                  />
+                  <MenuItem
+                    x:Name="ResetAllSetting"
+                    Header="{ll:Str 从资源管理器打开文件}"
+                    Command="{Binding PlacementTarget.Tag.OpenFileFromExplorerCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                    CommandParameter="{Binding}"
+                  />
+                </ContextMenu>
+              </Setter.Value>
+            </Setter>
+          </Style>
+        </ListBox.ItemContainerStyle>
+      </ListBox>
+      <StackPanel Grid.Row="3">
+        <Button
+          Grid.Column="2"
+          Margin="1"
+          IsEnabled="{Binding SelectedItem, ElementName=Settings, Converter={StaticResource NullToFalseConverter}}"
+          HorizontalAlignment="Stretch"
+          x:Name="SaveSetting"
+          Content="{ll:Str 保存}"
+          Style="{StaticResource RemindStyle}"
+          Tag="{Binding CurrentSetting.IsChanged, TargetNullValue=False}"
+          Command="{Binding SaveSettingCommand}"
+          CommandParameter="{Binding CurrentSetting}"
+        />
+        <Button
+          Grid.Column="3"
+          Margin="1"
+          IsEnabled="{Binding SelectedItem, ElementName=Settings, Converter={StaticResource NullToFalseConverter}}"
+          x:Name="ResetSetting"
+          HorizontalAlignment="Stretch"
+          Content="{ll:Str 重置}"
+          Style="{StaticResource Button_BaseStyle}"
+          Command="{Binding ResetSettingCommand}"
+          CommandParameter="{Binding CurrentSetting}"
+        />
+        <Button
+          Margin="1"
+          x:Name="OpenFile"
+          HorizontalAlignment="Stretch"
+          Content="{ll:Str 全部保存}"
+          Style="{StaticResource Button_BaseStyle}"
+          Command="{Binding SaveAllSettingCommand}"
+        />
+        <Button
+          Grid.Column="1"
+          Margin="1"
+          x:Name="OpenFileFromExplorer"
+          HorizontalAlignment="Stretch"
+          Content="{ll:Str 全部重置}"
+          Style="{StaticResource Button_BaseStyle}"
+          Command="{Binding ResetAllSettingCommand}"
+        />
+      </StackPanel>
+    </Grid>
+    <Rectangle Grid.Column="1" Width="2" Fill="#06000000" />
+    <Grid Margin="10" Grid.Column="2">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition />
+      </Grid.RowDefinitions>
+      <Grid ColumnDefinitions="*,Auto,Auto" Height="30">
+        <ListBox
+          x:Name="SubSettingTypes"
+          Style="{DynamicResource SideMenuListBoxStyle}"
+          ItemsSource="{x:Static vm:SettingViewModel.SubSettingTypes}"
+          SelectedItem="{Binding CurrentSubSettingType}"
+        >
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
+        </ListBox>
+        <Button
+          x:Name="LastSubSettingType"
+          HorizontalAlignment="Stretch"
+          VerticalAlignment="Stretch"
+          Grid.Column="1"
+          Width="20"
+          Margin="0"
+          Padding="0"
+          Click="LastSubSettingType_Click"
+          Style="{DynamicResource Button_BaseStyle}"
+        >
+          <TextBlock Text="《" Width="17" Height="16" />
+        </Button>
+        <Button
+          x:Name="NextSubSettingType"
+          HorizontalAlignment="Stretch"
+          VerticalAlignment="Stretch"
+          Margin="0"
+          Click="NextSubSettingType_Click"
+          Padding="0"
+          Style="{DynamicResource Button_BaseStyle}"
+          Grid.Column="2"
+          Width="20"
+        >
+          <TextBlock HorizontalAlignment="Right" Text="》" Width="7" Height="16" />
+        </Button>
+      </Grid>
+      <ContentControl x:Name="SettingView" Grid.Row="1" />
+    </Grid>
+  </Grid>
+</pu:WindowX>
