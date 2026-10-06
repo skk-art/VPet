@@ -2693,6 +2693,8 @@ namespace VPet_Simulator.Windows
                       Thread.Sleep(6000);//等启动动画播完再说话
                       try { CheckTaskReminder(true); } catch { }
                   });
+                  //内存优化: 启动完成后开启工作集修剪, 并在稍后做一次立即修剪
+                  StartMemoryTrim();
               });
 
 

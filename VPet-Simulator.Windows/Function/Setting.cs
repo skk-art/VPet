@@ -418,10 +418,11 @@ namespace VPet_Simulator.Windows
         }
         /// <summary>
         /// 桌宠图形渲染的分辨率,越高图形越清晰
+        /// (默认354: 显示尺寸约250dip, 354已有充足余量, 内存占用约为500分辨率的一半)
         /// </summary>
         public int Resolution
         {
-            get => this["gameconfig"].GetInt("resolution", 500);
+            get => this["gameconfig"].GetInt("resolution", 354);
             set => this["gameconfig"].SetInt("resolution", value);
         }
 

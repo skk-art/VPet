@@ -56,11 +56,10 @@ namespace VPet_Simulator.Windows
                 WindowStyle = WindowStyle.None;
             }
 
+            //内存优化: 统一限制动画加载节流上限 (原X64平台为"可用内存的1/2", 大内存机器上可达数GB)
             PNGAnimation.MaxLoadMemory = (int)Function.MemoryAvailable() / 2;
-#if !X64
-            if(PNGAnimation.MaxLoadMemory > 3000)
-                PNGAnimation.MaxLoadMemory = 3000;
-#endif
+            if (PNGAnimation.MaxLoadMemory > 1500)
+                PNGAnimation.MaxLoadMemory = 1500;
             if (PNGAnimation.MaxLoadMemory < 512)
                 PNGAnimation.MaxLoadMemory = 512;
 
@@ -771,6 +770,64 @@ namespace VPet_Simulator.Windows
                 GameSavesData.Statistics![(gint)"stat_single_profit_exp"] = (int)obj.count;
             }
         }
+
+        #region 内存优化: 工作集修剪
+        [DllImport("psapi.dll")]
+        private static extern bool EmptyWorkingSet(IntPtr hProcess);
+
+        private System.Timers.Timer? memoryTrimTimer;
+        /// <summary>
+        /// 从工作集里裁掉空闲页, 把内存还给系统 (纯优化操作, 不影响功能)
+        /// </summary>
+        private void TrimMemoryNow()
+        {
+            try
+            {
+                var p = Process.GetCurrentProcess();
+                p.Refresh();
+                //私有内存不足阈值时无需处理
+                if (p.PrivateMemorySize64 < 200L * 1024 * 1024)
+                    return;
+                GC.Collect(2, GCCollectionMode.Optimized, true, true);
+                GC.WaitForPendingFinalizers();
+                if (p.HasExited)
+                    return;
+                EmptyWorkingSet(p.Handle);
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// 定期内存修剪: 仅在桌宠空闲(没在工作/学习/睡觉/被提起)且内存超过阈值时执行,
+        /// 避免频繁GC造成卡顿
+        /// </summary>
+        public void StartMemoryTrim()
+        {
+            //启动40秒后先修剪一次 (此时动画已加载完毕, 效果最明显)
+            Task.Run(async () =>
+            {
+                await Task.Delay(40000);
+                if (Main.State == VPet_Simulator.Core.Main.WorkingState.Nomal)
+                    TrimMemoryNow();
+            });
+            memoryTrimTimer = new System.Timers.Timer(10 * 60 * 1000) { AutoReset = true };
+            memoryTrimTimer.Elapsed += (s, e) =>
+            {
+                try
+                {
+                    if (Main.State != VPet_Simulator.Core.Main.WorkingState.Nomal)
+                        return;
+                    var p = Process.GetCurrentProcess();
+                    p.Refresh();
+                    if (p.PrivateMemorySize64 < 300L * 1024 * 1024)
+                        return;
+                    TrimMemoryNow();
+                }
+                catch { }
+            };
+            memoryTrimTimer.Start();
+        }
+        #endregion
 
         private void Main_Event_TouchBody()
         {
