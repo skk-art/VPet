@@ -2,6 +2,17 @@
 
 简体中文 | [繁體中文](./README_zht.md) | [English](./README_en.md) | [日本語](./README_ja.md)
 
+> ## 📖 本分支新增功能与使用说明
+>
+> 本仓库是 [LorisYounger/VPet](https://github.com/LorisYounger/VPet) 的定制分支，在上游基础上新增了：
+>
+> - 🗑 **拖拽删除文件**：把文件拖到桌宠身上，确认后彻底删除
+> - 📝 **任务清单**：本日 / 本周 / 本月任务，勾选完成；每天 8/14/20 点定时提醒
+> - 🤖 **AI 聊天**：接入任意 OpenAI 兼容大模型（智谱 / DeepSeek / OpenAI / 商汤 SenseNova …），结合角色人设与宠物实时状态个性化回复
+> - 💬 **右键气泡菜单**、🖐 **全身拖动优化**、✋ **挂机触碰动画**、🛡 **屏幕边界保护**
+>
+> **详见 → [FEATURES.md （新增功能与使用说明）](./FEATURES.md)**
+
 虚拟桌宠模拟器 一个开源的桌宠软件, 可以内置到任何WPF应用程序
 
 ![主图](README.assets/%E4%B8%BB%E5%9B%BE.png)
