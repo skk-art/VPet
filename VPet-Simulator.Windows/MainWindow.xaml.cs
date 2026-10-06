@@ -787,6 +787,150 @@ namespace VPet_Simulator.Windows
             GameSavesData.Statistics![(gint)"stat_touch_legs"]++;
         }
 
+        #region 拖拽文件删除
+        /// <summary>
+        /// 拖拽进入: 提示可以删除
+        /// </summary>
+        private void Window_DragEnter(object sender, DragEventArgs e)
+        {
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effects = DragDropEffects.Move;
+                Main.LastInteractionTime = DateTime.Now;
+            }
+            else
+            {
+                e.Effects = DragDropEffects.None;
+            }
+            e.Handled = true;
+        }
+
+        private void Window_DragOver(object sender, DragEventArgs e)
+        {
+            e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Move : DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        /// <summary>
+        /// 拖放文件到桌宠: 弹出删除确认框, 确认后彻底删除
+        /// </summary>
+        private void Window_Drop(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+                return;
+            var paths = (string[]?)e.Data.GetData(DataFormats.FileDrop);
+            if (paths == null || paths.Length == 0)
+                return;
+            Main.LastInteractionTime = DateTime.Now;
+            Main.SayRnd("要彻底删除这些吗? 让我找找...", true);
+            try
+            {
+                var confirm = new winDropConfirm(paths) { Topmost = true, Owner = this };
+                confirm.ShowDialog();
+                if (!confirm.Confirmed)
+                {
+                    Main.SayRnd("好的, 那就不删了~", true);
+                    return;
+                }
+                int ok = 0;
+                var errors = new List<string>();
+                foreach (var path in paths)
+                {
+                    try
+                    {
+                        if (Directory.Exists(path))
+                            Directory.Delete(path, true);
+                        else if (File.Exists(path))
+                            File.Delete(path);
+                        else
+                            continue;
+                        ok++;
+                        ActivityLogs.Add(new VPet_Simulator.Windows.Interface.ActivityLog("filedelete", path));
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Add($"{Path.GetFileName(path)}: {ex.Message}");
+                    }
+                }
+                if (errors.Count == 0)
+                    Main.SayRnd($"已经帮你彻底删除 {ok} 个项目了~", true);
+                else
+                    Main.SayRnd($"删除了 {ok} 个, 有 {errors.Count} 个失败: {string.Join("; ", errors.Take(2))}", true);
+            }
+            catch (Exception ex)
+            {
+                Main.SayRnd($"删除时出错了: {ex.Message}", true);
+            }
+        }
+        #endregion
+
+        #region 任务清单
+        private winTaskList? taskWindow;
+        /// <summary>
+        /// 打开(或前置)任务清单窗口
+        /// </summary>
+        public void ShowTaskList(TaskScope? scope = null)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                if (taskWindow == null || !taskWindow.IsLoaded)
+                {
+                    taskWindow = new winTaskList { Topmost = true };
+                    taskWindow.Closed += (s, e) => taskWindow = null;
+                    taskWindow.Show();
+                }
+                if (scope.HasValue)
+                    taskWindow.OpenTab(scope.Value);
+                else
+                    taskWindow.Refresh();
+                taskWindow.Activate();
+            });
+        }
+
+        private int lastReminderHour = -1;
+        /// <summary>
+        /// 任务提醒检测: 启动时按当前时段弹一次; 运行中到 8/14/20 点整各弹一次(每天每档一次)
+        /// 8点: 本日任务清单, 14点: 尽快完成提醒, 20点: 本日完成情况
+        /// </summary>
+        public void CheckTaskReminder(bool onStartup)
+        {
+            var now = DateTime.Now;
+            int checkpoint = 0;
+            if (onStartup)
+            {//启动时检测时间, 按所处时段弹对应档 (8-14弹清单, 14-20弹催促, 20以后弹完成情况)
+                checkpoint = now.Hour >= 20 ? 20 : now.Hour >= 14 ? 14 : now.Hour >= 8 ? 8 : 0;
+            }
+            else
+            {//运行中只在整点档触发
+                if (now.Hour != lastReminderHour)
+                {
+                    lastReminderHour = now.Hour;
+                    if (now.Hour == 8 || now.Hour == 14 || now.Hour == 20)
+                        checkpoint = now.Hour;
+                }
+            }
+            if (checkpoint == 0 || TaskManager.IsReminderFiredToday(checkpoint))
+                return;
+            var (done, total) = TaskManager.Progress(TaskScope.Day);
+            if (total == 0 && checkpoint != 8)
+                return;//没有任务就不打扰 (8点的清单还是提示一次)
+            TaskManager.MarkReminderFired(checkpoint);
+            switch (checkpoint)
+            {
+                case 8:
+                    Main.SayRnd(total == 0 ? "早上好呀主人~ 今天还没有任务清单哦, 要规划一下吗?" : $"早上好~ 今天有 {total} 项任务, 要加油哦!", true);
+                    break;
+                case 14:
+                    Main.SayRnd($"下午啦~ 今天的任务还有 {total - done} 项没完成, 尽快完成哦!", true);
+                    break;
+                case 20:
+                    Main.SayRnd(done == total ? $"今天 {total} 项任务全部完成啦, 主人真棒!" : $"今天完成了 {done}/{total} 项, 还有 {total - done} 项没做完呢~", true);
+                    break;
+            }
+            ShowTaskList(TaskScope.Day);
+        }
+        #endregion
+
         private void Main_OnSay(SayInfo obj)
         {
             GameSavesData.Statistics![(gint)"stat_say_times"]++;

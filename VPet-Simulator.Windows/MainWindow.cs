@@ -2346,6 +2346,12 @@ namespace VPet_Simulator.Windows
                   Main.Event_TouchBody += Main_Event_TouchBody;
                   Main.Event_TouchLegs += Main_Event_TouchLegs;
 
+                  //任务清单: 气泡按钮 + 系统菜单入口
+                  Main.BubbleMenu!.EventTaskClick += () => ShowTaskList();
+                  Main.ToolBar.AddMenuButton(ToolBar.MenuType.Setting, "任务清单".Translate(), () => ShowTaskList());
+                  //任务提醒: 运行中整点检测 (启动检测在GameLoaded之后)
+                  Main.TimeHandle += (x) => CheckTaskReminder(false);
+
                   HashCheck = HashCheck;
 
                   //添加捏脸动画(若有)
@@ -2680,6 +2686,13 @@ namespace VPet_Simulator.Windows
                   }
                   if (Set.DeBug)
                       ActivityLogs.CollectionChanged += ActivityLogs_WriteFile;
+
+                  //任务提醒: 启动时检测时间并弹出对应提醒 (8/14/20点: 清单/催促/完成情况)
+                  Task.Run(() =>
+                  {
+                      Thread.Sleep(6000);//等启动动画播完再说话
+                      try { CheckTaskReminder(true); } catch { }
+                  });
               });
 
 

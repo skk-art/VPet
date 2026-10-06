@@ -103,5 +103,18 @@
                 <Polygon Fill="{DynamicResource DARKPrimaryText}" HorizontalAlignment="Center" Points="0,0 18,0 9,14" />
             </StackPanel>
         </Grid>
+        <!-- 任务: 底部中央 -->
+        <Grid x:Name="BubTask" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,66"
+                RenderTransformOrigin="0.5,0.5" Visibility="Collapsed" MouseLeftButtonUp="BubTask_Click">
+            <StackPanel Orientation="Vertical">
+                <Polygon Fill="{DynamicResource DARKPrimaryText}" HorizontalAlignment="Center" Points="0,14 9,0 18,14" />
+                <Border Style="{StaticResource BubbleBorderStyle}" Padding="22,12">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource BubbleIcon}" Text="📝" />
+                        <TextBlock Style="{StaticResource BubbleText}" Text="{ll:Str 任务}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>

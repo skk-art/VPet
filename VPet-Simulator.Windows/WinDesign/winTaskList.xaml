@@ -1,0 +1,87 @@
+<pu:WindowX x:Class="VPet_Simulator.Windows.winTaskList" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:pu="clr-namespace:Panuon.WPF.UI;assembly=Panuon.WPF.UI" xmlns:local="clr-namespace:VPet_Simulator.Windows"
+        Title="任务清单" Width="520" Height="600" WindowStartupLocation="CenterScreen"
+        mc:Ignorable="d" Background="{DynamicResource DARKPrimaryText}" FontSize="14" MinWidth="440" MinHeight="400">
+    <Grid Margin="16,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <TextBlock Text="📝 任务清单" FontWeight="Bold" FontSize="18"
+                Foreground="{DynamicResource DARKPrimary}" Margin="0,0,0,6" />
+        <TextBlock x:Name="TxtSummary" Grid.Row="1" Margin="0,0,0,8" TextWrapping="Wrap"
+                Foreground="{DynamicResource DARKPrimary}" />
+        <TabControl x:Name="Tabs" Grid.Row="2" Background="{x:Null}" BorderThickness="0">
+            <TabItem Header="本日任务">
+                <Grid Margin="4,8,4,4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="SpDay" />
+                    </ScrollViewer>
+                    <Grid Grid.Row="1" Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="TbDay" Padding="6,5" pu:TextBoxHelper.CornerRadius="5"
+                                pu:TextBoxHelper.Watermark="输入今天的任务, 回车添加" KeyDown="AddBox_KeyDown" />
+                        <Button Grid.Column="1" Content="添加" Padding="16,6" Margin="8,0,0,0" Cursor="Hand"
+                                pu:ButtonHelper.CornerRadius="5" Style="{DynamicResource ThemedButtonStyle}" Click="AddDay_Click" />
+                    </Grid>
+                </Grid>
+            </TabItem>
+            <TabItem Header="本周任务">
+                <Grid Margin="4,8,4,4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="SpWeek" />
+                    </ScrollViewer>
+                    <Grid Grid.Row="1" Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="TbWeek" Padding="6,5" pu:TextBoxHelper.CornerRadius="5"
+                                pu:TextBoxHelper.Watermark="输入本周的任务, 回车添加" KeyDown="AddBox_KeyDown" />
+                        <Button Grid.Column="1" Content="添加" Padding="16,6" Margin="8,0,0,0" Cursor="Hand"
+                                pu:ButtonHelper.CornerRadius="5" Style="{DynamicResource ThemedButtonStyle}" Click="AddWeek_Click" />
+                    </Grid>
+                </Grid>
+            </TabItem>
+            <TabItem Header="本月任务">
+                <Grid Margin="4,8,4,4">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="SpMonth" />
+                    </ScrollViewer>
+                    <Grid Grid.Row="1" Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="TbMonth" Padding="6,5" pu:TextBoxHelper.CornerRadius="5"
+                                pu:TextBoxHelper.Watermark="输入本月的任务, 回车添加" KeyDown="AddBox_KeyDown" />
+                        <Button Grid.Column="1" Content="添加" Padding="16,6" Margin="8,0,0,0" Cursor="Hand"
+                                pu:ButtonHelper.CornerRadius="5" Style="{DynamicResource ThemedButtonStyle}" Click="AddMonth_Click" />
+                    </Grid>
+                </Grid>
+            </TabItem>
+        </TabControl>
+        <TextBlock x:Name="TxtFoot" Grid.Row="3" Margin="0,8,0,0" FontSize="12" Opacity="0.7" TextWrapping="Wrap"
+                Foreground="{DynamicResource DARKPrimary}"
+                Text="勾选表示完成; 每天 8 点/14 点/20 点桌宠会主动提醒你 (每日任务清单 / 尽快完成 / 当日完成情况)" />
+    </Grid>
+</pu:WindowX>

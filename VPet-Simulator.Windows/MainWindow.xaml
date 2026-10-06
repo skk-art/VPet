@@ -6,7 +6,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" ShowInTaskbar="False"
         xmlns:local="clr-namespace:VPet_Simulator.Windows" mc:Ignorable="d" WindowStyle="None" Title="MainWindow"
         Closed="Window_Closed" pu:WindowXCaption.Height="0" SizeToContent="WidthAndHeight" Foreground="{StaticResource PrimaryText}"
-        Loaded="Window_SourceInitialized" LocationChanged="WindowX_LocationChanged" Background="{x:Null}">
+        Loaded="Window_SourceInitialized" LocationChanged="WindowX_LocationChanged" Background="{x:Null}"
+        AllowDrop="True" DragEnter="Window_DragEnter" DragOver="Window_DragOver" Drop="Window_Drop">
     <WindowChrome.WindowChrome>
         <WindowChrome GlassFrameThickness="-1" />
     </WindowChrome.WindowChrome>

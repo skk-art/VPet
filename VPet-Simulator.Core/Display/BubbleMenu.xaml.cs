@@ -63,7 +63,7 @@ namespace VPet_Simulator.Core
             else
                 BubDIY.Visibility = Visibility.Collapsed;
 
-            var bubbles = new Grid[] { BubFeed, BubPanel, BubInteract, BubSetting, BubDIY };
+            var bubbles = new Grid[] { BubFeed, BubPanel, BubInteract, BubSetting, BubDIY, BubTask };
             for (int i = 0; i < bubbles.Length; i++)
             {
                 var bub = bubbles[i];
@@ -107,7 +107,7 @@ namespace VPet_Simulator.Core
                 return;
             closing = true;
             CloseTimer.Stop();
-            var bubbles = new Grid[] { BubFeed, BubPanel, BubInteract, BubSetting, BubDIY };
+            var bubbles = new Grid[] { BubFeed, BubPanel, BubInteract, BubSetting, BubDIY, BubTask };
             foreach (var bub in bubbles)
             {
                 var animO = new DoubleAnimation(0, TimeSpan.FromMilliseconds(120));
@@ -138,7 +138,7 @@ namespace VPet_Simulator.Core
         {
             return BubFeed.Visibility == Visibility.Visible || BubPanel.Visibility == Visibility.Visible
                 || BubInteract.Visibility == Visibility.Visible || BubSetting.Visibility == Visibility.Visible
-                || BubDIY.Visibility == Visibility.Visible;
+                || BubDIY.Visibility == Visibility.Visible || BubTask.Visibility == Visibility.Visible;
         }
 
         /// <summary>
@@ -183,6 +183,17 @@ namespace VPet_Simulator.Core
         {
             if (m.ToolBar != null)
                 OpenToolBarSub(m.ToolBar.MenuDIY);
+        }
+
+        /// <summary>
+        /// 任务清单按钮被点击 (由主程序接管打开任务窗口)
+        /// </summary>
+        public event Action? EventTaskClick;
+
+        private void BubTask_Click(object sender, MouseButtonEventArgs e)
+        {
+            Hide();
+            EventTaskClick?.Invoke();
         }
 
         private void UserControl_MouseEnter(object sender, MouseEventArgs e)
