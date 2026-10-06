@@ -51,6 +51,7 @@ namespace VPet.Plugin.AITalk
             TbPersona.Text = talkBox.Persona;
             SldHistory.Value = talkBox.HistoryLength;
             CkbState.IsChecked = talkBox.InjectState;
+            CkbMemory.IsChecked = talkBox.AutoMemory;
             TxtHistory.Text = $"{(int)SldHistory.Value} 轮";
             SldHistory.ValueChanged += (s, e) =>
                 TxtHistory.Text = $"{(int)SldHistory.Value} 轮";
@@ -75,6 +76,7 @@ namespace VPet.Plugin.AITalk
             talkBox.Persona = TbPersona.Text;
             talkBox.HistoryLength = (int)SldHistory.Value;
             talkBox.InjectState = CkbState.IsChecked == true;
+            talkBox.AutoMemory = CkbMemory.IsChecked == true;
         }
 
         private void BtnSave_Click(object sender, RoutedEventArgs e)
@@ -88,6 +90,12 @@ namespace VPet.Plugin.AITalk
         {
             talkBox.ClearHistory();
             MessageBoxX.Show("对话记忆已清空", "AI 聊天");
+        }
+
+        private void BtnMemory_Click(object sender, RoutedEventArgs e)
+        {
+            SaveSettings();
+            new winAITalkMemory { Topmost = true }.Show();
         }
 
         private void BtnLog_Click(object sender, RoutedEventArgs e)

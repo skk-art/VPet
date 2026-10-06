@@ -9,6 +9,7 @@ using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using VPet_Simulator.Core;
@@ -114,7 +115,47 @@ namespace VPet.Plugin.AITalk
             }
         }
 
-        public AITalkBox(MainPlugin mainPlugin) : base(mainPlugin) { }
+        public AITalkBox(MainPlugin mainPlugin) : base(mainPlugin)
+        {
+            LoadHistory();
+        }
+
+        #region 对话历史持久化
+        private static string HistoryPath => Path.Combine(AITalkMemory.Dir, "AI_ChatHistory.json");
+        private void LoadHistory()
+        {
+            try
+            {
+                if (File.Exists(HistoryPath))
+                {
+                    var list = JsonSerializer.Deserialize<List<string[]>>(File.ReadAllText(HistoryPath));
+                    if (list != null)
+                    {
+                        lock (history)
+                        {
+                            foreach (var it in list.TakeLast(60))
+                                if (it.Length == 2)
+                                    history.Add((it[0], it[1]));
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+        private void SaveHistory()
+        {
+            try
+            {
+                List<string[]> list;
+                lock (history)
+                {
+                    list = history.TakeLast(60).Select(h => new[] { h.role, h.content }).ToList();
+                }
+                File.WriteAllText(HistoryPath, JsonSerializer.Serialize(list));
+            }
+            catch { }
+        }
+        #endregion
 
         #region 日志
         /// <summary>
@@ -182,6 +223,12 @@ namespace VPet.Plugin.AITalk
             get => MainPlugin.MW.Set["AITalk"].GetBool("injectstate");
             set => MainPlugin.MW.Set["AITalk"].SetBool("injectstate", value);
         }
+        /// <summary>是否自动从每次对话中提炼记忆 (默认开启; 存储的是"关闭"标记)</summary>
+        public bool AutoMemory
+        {
+            get => !MainPlugin.MW.Set["AITalk"].GetBool("automemoryoff");
+            set => MainPlugin.MW.Set["AITalk"].SetBool("automemoryoff", !value);
+        }
         #endregion
 
         /// <summary>
@@ -192,6 +239,14 @@ namespace VPet.Plugin.AITalk
             var sb = new StringBuilder(Persona);
             sb.AppendLine();
             sb.AppendLine("【要求】用中文口语回复, 保持角色扮演, 一次回复控制在60字以内, 不要使用markdown、列表或emoji。");
+            //知识库与长期记忆注入 (让AI了解主人)
+            try
+            {
+                var mem = AITalkMemory.BuildPromptSection();
+                if (!string.IsNullOrWhiteSpace(mem))
+                    sb.AppendLine(mem);
+            }
+            catch { }
             if (!InjectState)
                 return sb.ToString();
             try
@@ -249,7 +304,14 @@ namespace VPet.Plugin.AITalk
                     Setting();
                     return;
                 }
-                await ChatStreamAsync(text);
+                var reply = await ChatStreamAsync(text);
+                if (string.IsNullOrWhiteSpace(reply))
+                {//推理模型的思考可能耗尽了token预算导致正文为空, 自动以更大预算重试一次
+                    Log("⚠ 正文为空(思考可能耗尽token预算), 自动以更大预算重试一次");
+                    var reply2 = await ChatStreamAsync(text, 8000);
+                    if (string.IsNullOrWhiteSpace(reply2))
+                        Say("……(模型这次没有说出话来, 再问一次试试?)", true);
+                }
             }
             catch (Exception e)
             {
@@ -282,7 +344,8 @@ namespace VPet.Plugin.AITalk
         /// 调用 Chat Completions 接口 (SSE流式), 桌宠边思考边打字机式说话
         /// 兼容: 非流式响应回退解析 / 推理模型的 reasoning 增量 / choices为空的usage事件
         /// </summary>
-        private async Task ChatStreamAsync(string text)
+        /// <param name="maxTokens">本次请求的最大token预算 (推理模型思考也会消耗, 需给足)</param>
+        private async Task<string> ChatStreamAsync(string text, int maxTokens = 4000)
         {
             DisplayThink();
             var messages = new List<(string role, string content)> { ("system", BuildSystemPrompt()) };
@@ -298,12 +361,12 @@ namespace VPet.Plugin.AITalk
                 messages = messages.Select(m => new { role = m.role, content = m.content }),
                 stream = true,
                 temperature = 0.8,
-                max_tokens = 1200,
+                max_tokens = maxTokens,
             };
             var url = NormalizeUrl(APIUrl);
             if (!string.Equals(url, APIUrl.Trim(), StringComparison.OrdinalIgnoreCase))
                 Log($"地址自动补全: {APIUrl} → {url}");
-            Log($"→ 请求 {url} model={Model} key={Mask(APIKey)} max_tokens=1200 输入=\"{Truncate(text, 80)}\"");
+            Log($"→ 请求 {url} model={Model} key={Mask(APIKey)} max_tokens={maxTokens} 输入=\"{Truncate(text, 80)}\"");
             HttpResponseMessage response = await SendWithFallbackAsync(() =>
             {
                 var r = new HttpRequestMessage(HttpMethod.Post, url);
@@ -331,9 +394,14 @@ namespace VPet.Plugin.AITalk
                 {
                     history.Add(("user", text));
                     history.Add(("assistant", full));
-                    while (history.Count > HistoryLength * 2)
+                    while (history.Count > 60)
                         history.RemoveAt(0);
                 }
+                SaveHistory();
+                //持久化聊天记录 + 自动提炼长期记忆
+                AITalkMemory.AppendChatLog(text, full);
+                if (AutoMemory && !string.IsNullOrWhiteSpace(full))
+                    _ = ExtractMemoriesAsync(text, full);
             };
             DisplayThinkToSayRnd(say);
 
@@ -345,15 +413,14 @@ namespace VPet.Plugin.AITalk
                 var content = TryParseFullContent(body);
                 if (string.IsNullOrWhiteSpace(content))
                 {
-                    say.UpdateAllText("......");
                     say.FinishGenerate();
                     Log("✗ 非流式响应无法解析出回复内容");
-                    return;
+                    return "";
                 }
                 say.UpdateAllText(content);
                 say.FinishGenerate();
                 Log($"✓ 非流式解析成功, 回复{content.Length}字");
-                return;
+                return content;
             }
 
             using (var stream = await response.Content.ReadAsStreamAsync())
@@ -407,12 +474,8 @@ namespace VPet.Plugin.AITalk
                 say.FinishGenerate();
                 Log($"✓ 流式完成: 正文{replyBuilder.Length}字, 解析{parsed}条, 跳过{skipped}条"
                     + (firstBad != null ? $", 首个无法解析数据: {Truncate(firstBad, 200)}" : ""));
-                if (replyBuilder.Length == 0)
-                {
-                    say.UpdateAllText("……(接口返回成功但内容为空, 可能是模型只输出了思考内容或token不足)");
-                    say.FinishGenerate();
-                }
             }
+            return replyBuilder.ToString();
             }
         }
 
@@ -446,6 +509,89 @@ namespace VPet.Plugin.AITalk
         private void Say(string text, bool force = false)
         {
             MainPlugin.MW.Dispatcher.Invoke(() => MainPlugin.MW.Main.SayRnd(text, force));
+        }
+
+        /// <summary>
+        /// 从一轮对话中提炼关于主人的新信息, 存入长期记忆 (每轮对话后自动执行)
+        /// </summary>
+        private static readonly SemaphoreSlim extractLock = new(1, 1);
+        private async Task ExtractMemoriesAsync(string userText, string replyText)
+        {
+            try
+            {
+                await extractLock.WaitAsync();
+                try
+                {
+                    var existing = AITalkMemory.Memories.TakeLast(50).Select(m => "- " + m.Content).ToList();
+                    var prompt = new StringBuilder();
+                    prompt.AppendLine("你是记忆整理助手。下面是主人与桌宠「萝莉斯」的一段对话。");
+                    prompt.AppendLine("请从中提取关于「主人」的、值得长期记住的新信息: 个人信息、喜好、习惯、计划、重要事件等。");
+                    prompt.AppendLine("要求:");
+                    prompt.AppendLine("1. 只提取对话中明确表达的信息, 不要推测");
+                    prompt.AppendLine("2. 不要重复「已有记忆」中的内容");
+                    prompt.AppendLine("3. 每条一行, 以\"- \"开头, 简洁陈述(不超过30字), 不要编号和其他说明文字");
+                    prompt.AppendLine("4. 如果没有新信息, 只输出: 无");
+                    if (existing.Count > 0)
+                    {
+                        prompt.AppendLine("已有记忆:");
+                        foreach (var e in existing)
+                            prompt.AppendLine(e);
+                    }
+                    prompt.AppendLine("对话:");
+                    prompt.AppendLine("主人: " + userText);
+                    prompt.AppendLine("萝莉斯: " + Truncate(replyText, 300));
+
+                    var req = new
+                    {
+                        model = Model,
+                        messages = new[] { new { role = "user", content = prompt.ToString() } },
+                        stream = false,
+                        temperature = 0.2,
+                        max_tokens = 1200,
+                    };
+                    var url = NormalizeUrl(APIUrl);
+                    using var response = await SendWithFallbackAsync(() =>
+                    {
+                        var r = new HttpRequestMessage(HttpMethod.Post, url);
+                        r.Content = new StringContent(JsonSerializer.Serialize(req), Encoding.UTF8, "application/json");
+                        r.Headers.Authorization = new AuthenticationHeaderValue("Bearer", APIKey);
+                        return r;
+                    }, HttpCompletionOption.ResponseContentRead, "记忆提炼");
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        Log($"[记忆] 提炼请求失败 HTTP {(int)response.StatusCode}");
+                        return;
+                    }
+                    var body = await response.Content.ReadAsStringAsync();
+                    var content = TryParseFullContent(body);
+                    if (string.IsNullOrWhiteSpace(content) || content.Trim().TrimEnd('。', '.') == "无")
+                    {
+                        Log("[记忆] 本轮无新增信息");
+                        return;
+                    }
+                    int added = 0;
+                    foreach (var line in content.Split('\n'))
+                    {
+                        var t = line.Trim();
+                        if (!(t.StartsWith("-") || t.StartsWith("•") || t.StartsWith("*")))
+                            continue;
+                        t = t.TrimStart('-', '•', '*', ' ').Trim();
+                        if (t.Length < 2 || t == "无")
+                            continue;
+                        if (AITalkMemory.Add(t))
+                            added++;
+                    }
+                    Log($"[记忆] 提炼完成: 新增 {added} 条 (记忆库共 {AITalkMemory.Memories.Count} 条)");
+                }
+                finally
+                {
+                    extractLock.Release();
+                }
+            }
+            catch (Exception e)
+            {
+                Log("[记忆] 提炼异常: " + e.Message);
+            }
         }
 
         public override void Setting()

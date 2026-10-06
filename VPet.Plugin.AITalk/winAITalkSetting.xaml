@@ -48,6 +48,8 @@
                 </StackPanel>
                 <CheckBox x:Name="CkbState" Grid.Row="5" Grid.Column="1" Margin="10,6,0,2"
                         Content="聊天时让 AI 知道桌宠的实时状态 (心情/饱食/金钱/好感度等)" />
+                <CheckBox x:Name="CkbMemory" Grid.Row="6" Grid.Column="1" Margin="10,2,0,2"
+                        Content="自动记忆: 每次聊天后自动学习关于主人的信息, 存入长期记忆库" />
             </Grid>
             <TextBlock Text="角色人设 (系统提示词, 决定桌宠的性格与说话方式)" FontWeight="Bold" Margin="0,12,0,4"
                     Foreground="{DynamicResource DARKPrimary}" />
@@ -65,6 +67,9 @@
             <Button x:Name="BtnLog" Grid.Column="0" Content="打开日志" Padding="15,6" Margin="0,0,10,0"
                     pu:ButtonHelper.CornerRadius="5" Click="BtnLog_Click" Cursor="Hand"
                     ToolTip="查看请求/响应详情, 无法接入时可据此排查" />
+            <Button x:Name="BtnMemory" Grid.Column="1" Content="🧠 记忆与知识库" Padding="15,6" Margin="0,0,10,0"
+                    HorizontalAlignment="Left" pu:ButtonHelper.CornerRadius="5" Click="BtnMemory_Click" Cursor="Hand"
+                    ToolTip="管理 '关于我' 知识库与长期记忆 —— 让桌宠真正了解你" />
             <Button x:Name="BtnTest" Grid.Column="2" Content="测试连接" Padding="15,6" Margin="0,0,10,0"
                     pu:ButtonHelper.CornerRadius="5" Click="BtnTest_Click" Cursor="Hand" />
             <Button x:Name="BtnClear" Grid.Column="3" Content="清空对话记忆" Padding="15,6" Margin="0,0,10,0"
