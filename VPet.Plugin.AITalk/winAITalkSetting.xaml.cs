@@ -157,6 +157,12 @@ namespace VPet.Plugin.AITalk
         /// </summary>
         private async Task<string> TestRequestAsync()
         {
+            var keyCheck = AITalkBox.CheckKeyLooksValid(talkBox.APIKey);
+            if (keyCheck != null)
+            {
+                AITalkBox.Log("测试连接 密钥格式异常: " + keyCheck);
+                throw new Exception(keyCheck);
+            }
             var url = AITalkBox.NormalizeUrl(talkBox.APIUrl);
             if (!string.Equals(url, talkBox.APIUrl.Trim(), StringComparison.OrdinalIgnoreCase))
                 AITalkBox.Log($"测试连接 地址自动补全: {talkBox.APIUrl} → {url}");

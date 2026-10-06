@@ -68,6 +68,23 @@ namespace VPet.Plugin.AITalk
             return u;
         }
         /// <summary>
+        /// 密钥格式防呆校验: 常见误填(把API地址/整段配置粘进密钥栏)
+        /// </summary>
+        /// <returns>有问题时返回中文提示, 否则返回null</returns>
+        public static string? CheckKeyLooksValid(string key)
+        {
+            var k = (key ?? "").Trim();
+            if (k.Length == 0)
+                return null;
+            if (k.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || k.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                return "主人, 「API 密钥」栏里填的好像是一个网址…\n请把网址填到「API 地址」栏; 「API 密钥」栏要填服务商控制台创建的 API Key";
+            if (k.Contains("sensenova.cn") || k.Contains("bigmodel.cn") || k.Contains("deepseek.com") || k.Contains("openai.com"))
+                return "主人, 「API 密钥」栏里填的好像是网址的一部分…\n「API 密钥」栏请填服务商控制台创建的 API Key (一串字母数字), 网址请填到「API 地址」栏";
+            if (k.Contains(' '))
+                return "主人, 「API 密钥」里有空格, 请检查是否复制了多余字符~";
+            return null;
+        }
+        /// <summary>
         /// 判断是否为网络层错误(可尝试换网络路径重试)
         /// </summary>
         private static bool IsNetworkError(Exception ex)
@@ -221,6 +238,14 @@ namespace VPet.Plugin.AITalk
                 if (string.IsNullOrWhiteSpace(APIKey))
                 {
                     Say("主人, 还没有配置 AI 接口哦, 马上为你打开设置窗口~");
+                    Setting();
+                    return;
+                }
+                var keyErr = CheckKeyLooksValid(APIKey);
+                if (keyErr != null)
+                {
+                    Log("密钥格式异常: " + keyErr);
+                    Say(keyErr, true);
                     Setting();
                     return;
                 }
