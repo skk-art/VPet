@@ -18,6 +18,7 @@
 		<PackageReference Include="LinePutScript.Localization.WPF" Version="1.0.7" />
 		<PackageReference Include="Panuon.WPF" Version="1.1.3" />
 		<PackageReference Include="Panuon.WPF.UI" Version="1.2.4.10" />
+		<PackageReference Include="System.Speech" Version="8.0.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Update="info.lps">
@@ -28,9 +29,12 @@
 	<Target Name="DeployToMod" AfterTargets="Build" Condition="'$(Configuration)'=='Debug'">
 		<PropertyGroup>
 			<ModDir>$(MSBuildThisFileDirectory)..\VPet-Simulator.Windows\mod\1112_AITalk\plugin\</ModDir>
+			<SpeechDll>$(NuGetPackageRoot)system.speech/8.0.0/runtimes/win/lib/net8.0/System.Speech.dll</SpeechDll>
 		</PropertyGroup>
 		<Message Importance="high" Text="DeployToMod: $(TargetPath) -> $(ModDir)" />
 		<MakeDir Directories="$(ModDir)" />
 		<Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModDir)" SkipUnchangedFiles="true" />
+		<!-- 语音识别依赖 (System.Speech 为 RID 特定包, 无RID构建时需手动部署) -->
+		<Copy SourceFiles="$(SpeechDll)" DestinationFolder="$(ModDir)" SkipUnchangedFiles="true" Condition="Exists('$(SpeechDll)')" />
 	</Target>
 </Project>

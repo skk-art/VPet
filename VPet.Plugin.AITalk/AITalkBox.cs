@@ -118,7 +118,167 @@ namespace VPet.Plugin.AITalk
         public AITalkBox(MainPlugin mainPlugin) : base(mainPlugin)
         {
             LoadHistory();
+            InitVoiceInput();
         }
+
+        #region 语音输入
+        private VoiceInput? voice;
+        private System.Windows.Controls.Button? btnVoice;
+        private System.Windows.Controls.TextBlock? txtVoiceStatus;
+
+        /// <summary>
+        /// 初始化语音输入: 聊天框内添加麦克风按钮, 注册语音指令
+        /// </summary>
+        private void InitVoiceInput()
+        {
+            try
+            {
+                if (!VoiceInput.IsSupported)
+                {
+                    Log("[语音] 系统未安装语音识别器, 语音输入不可用");
+                    return;
+                }
+                //语音指令表 (仅匹配短句; 未命中指令的语音会作为聊天内容发给AI)
+                VoiceInput.VoiceCommands.Clear();
+                VoiceInput.VoiceCommands.AddRange(new[]
+                {
+                    new VoiceInput.VoiceCommand { Name = "睡觉", Keywords = new[] { "睡觉", "休息一下", "困了", "去睡" }, Action = DoSleep },
+                    new VoiceInput.VoiceCommand { Name = "起床", Keywords = new[] { "起床", "醒醒", "别睡了" }, Action = DoWakeUp },
+                    new VoiceInput.VoiceCommand { Name = "停止工作", Keywords = new[] { "停止工作", "停止学习", "别干了" }, Action = DoStopWork },
+                    new VoiceInput.VoiceCommand { Name = "打开投喂", Keywords = new[] { "投喂", "喂我", "吃点东西" }, Action = DoOpenFeed },
+                    new VoiceInput.VoiceCommand { Name = "任务清单", Keywords = new[] { "任务清单", "待办事项", "待办", "查看任务" }, Action = DoOpenTasks },
+                });
+                voice = new VoiceInput();
+                voice.StatusChanged += s => MainPlugin.MW.Dispatcher.Invoke(() =>
+                {
+                    if (btnVoice != null)
+                        btnVoice.Content = string.IsNullOrEmpty(s) ? "🎤 点击说话" : "🔴 " + s;
+                });
+                voice.Failed += msg => MainPlugin.MW.Dispatcher.Invoke(() =>
+                {
+                    if (txtVoiceStatus != null)
+                        txtVoiceStatus.Text = msg;
+                    Log("[语音] " + msg);
+                });
+                voice.Recognized += OnVoiceRecognized;
+
+                //聊天框底部添加麦克风按钮与状态文字
+                var panel = new System.Windows.Controls.StackPanel
+                {
+                    Orientation = System.Windows.Controls.Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Left,
+                    Margin = new Thickness(2, 6, 2, 0),
+                };
+                btnVoice = new System.Windows.Controls.Button
+                {
+                    Content = "🎤 点击说话",
+                    FontSize = 22,
+                    Padding = new Thickness(14, 4, 14, 4),
+                    BorderThickness = new Thickness(2),
+                    Cursor = System.Windows.Input.Cursors.Hand,
+                    ToolTip = "语音输入: 直接说话即可与桌宠聊天;\n也支持语音指令: 睡觉 / 起床 / 停止工作 / 投喂 / 任务清单",
+                };
+                btnVoice.SetResourceReference(FrameworkElement.StyleProperty, "ThemedButtonStyle");
+                Panuon.WPF.UI.ButtonHelper.SetCornerRadius(btnVoice, new CornerRadius(4));
+                btnVoice.Click += (s, e) => voice?.ListenOnce();
+                txtVoiceStatus = new System.Windows.Controls.TextBlock
+                {
+                    FontSize = 20,
+                    Margin = new Thickness(10, 0, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Opacity = 0.85,
+                };
+                txtVoiceStatus.SetResourceReference(System.Windows.Controls.TextBlock.ForegroundProperty, "DARKPrimary");
+                panel.Children.Add(btnVoice);
+                panel.Children.Add(txtVoiceStatus);
+                PublicGrid.Children.Add(panel);
+                Log("[语音] 语音输入已就绪 (识别器: " + System.Speech.Recognition.SpeechRecognitionEngine.InstalledRecognizers()[0].Culture.DisplayName + ")");
+            }
+            catch (Exception e)
+            {
+                Log("[语音] 初始化异常: " + e.Message);
+            }
+        }
+
+        /// <summary>
+        /// 识别到语音文本: 优先按指令执行, 否则作为聊天内容发送
+        /// </summary>
+        private void OnVoiceRecognized(string text)
+        {
+            MainPlugin.MW.Dispatcher.Invoke(() =>
+            {
+                try
+                {
+                    var cmd = VoiceInput.TryExecuteCommand(text);
+                    if (cmd != null)
+                    {
+                        if (txtVoiceStatus != null)
+                            txtVoiceStatus.Text = $"已执行语音指令「{cmd}」";
+                        MainPlugin.MW.Main.SayRnd($"收到指令「{cmd}」~", true);
+                        return;
+                    }
+                    if (txtVoiceStatus != null)
+                        txtVoiceStatus.Text = $"识别: {text}";
+                    tbTalk.Text = text;
+                    btnSend.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Button.ClickEvent));
+                }
+                catch (Exception e)
+                {
+                    Log("[语音] 处理失败: " + e.Message);
+                }
+            });
+        }
+
+        private bool DoSleep()
+        {
+            var m = MainPlugin.MW.Main;
+            if (m.State == Main.WorkingState.Sleep)
+                return false;
+            if (m.State is Main.WorkingState.Nomal or Main.WorkingState.Travel)
+            {
+                m.DisplaySleep(true);
+                return true;
+            }
+            m.WorkTimer?.Stop(() => m.DisplaySleep(true), WorkTimer.FinishWorkInfo.StopReason.MenualStop);
+            return true;
+        }
+
+        private bool DoWakeUp()
+        {
+            var m = MainPlugin.MW.Main;
+            if (m.State != Main.WorkingState.Sleep || m.Core.Save!.Mode == IGameSave.ModeType.Ill)
+                return false;
+            m.State = Main.WorkingState.Nomal;
+            m.Display(GraphType.Sleep, AnimatType.C_End, m.DisplayNomal);
+            return true;
+        }
+
+        private bool DoStopWork()
+        {
+            var m = MainPlugin.MW.Main;
+            if (m.State != Main.WorkingState.Work)
+                return false;
+            m.WorkTimer?.Stop(() => m.DisplayNomal(), WorkTimer.FinishWorkInfo.StopReason.MenualStop);
+            return true;
+        }
+
+        private bool DoOpenFeed()
+        {
+            var m = MainPlugin.MW.Main;
+            m.ToolBar.Show();
+            m.ToolBar.MenuFeed.IsSubmenuOpen = true;
+            return true;
+        }
+
+        private bool DoOpenTasks()
+        {
+            var mi = MainPlugin.MW.GetType().GetMethod("ShowTaskList");
+            if (mi == null)
+                return false;
+            mi.Invoke(MainPlugin.MW, new object?[] { null });
+            return true;
+        }
+        #endregion
 
         #region 对话历史持久化
         private static string HistoryPath => Path.Combine(AITalkMemory.Dir, "AI_ChatHistory.json");
@@ -630,6 +790,6 @@ namespace VPet.Plugin.AITalk
                 history.Clear();
         }
 
-        public void Dispose() { }
+        public void Dispose() { voice?.Dispose(); }
     }
 }
