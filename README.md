@@ -1,184 +1,98 @@
-# VPet-Simulator
+# 虚拟桌宠（定制版）
 
-简体中文 | [繁體中文](./README_zht.md) | [English](./README_en.md) | [日本語](./README_ja.md)
+一只住在你桌面上的桌宠：**会陪你聊天、能投喂互动、会打工学习，还能帮你管理任务、删除文件。**
 
-> ## 📖 本分支新增功能与使用说明
->
-> 本仓库是 [LorisYounger/VPet](https://github.com/LorisYounger/VPet) 的定制分支，在上游基础上新增了：
->
-> - 🗑 **拖拽删除文件**：把文件拖到桌宠身上，确认后彻底删除
-> - 📝 **任务清单**：本日 / 本周 / 本月任务，勾选完成；每天 8/14/20 点定时提醒
-> - 🤖 **AI 聊天**：接入任意 OpenAI 兼容大模型（智谱 / DeepSeek / OpenAI / 商汤 SenseNova …），结合角色人设与宠物实时状态个性化回复
-> - 💬 **右键气泡菜单**、🖐 **全身拖动优化**、✋ **挂机触碰动画**、🛡 **屏幕边界保护**
->
-> **详见 → [FEATURES.md （新增功能与使用说明）](./FEATURES.md)**
-
-虚拟桌宠模拟器 一个开源的桌宠软件, 可以内置到任何WPF应用程序
+> 本项目是个人学习与定制作品，在他人开源的桌宠代码基础上修改而来，**完全开源**（详见文末[开源声明与致谢](#开源声明与致谢)）。
 
 ![主图](README.assets/%E4%B8%BB%E5%9B%BE.png)
 
-获取虚拟桌宠模拟器 [OnSteam(免费)](https://store.steampowered.com/app/1920960/VPet) 或 通过[Nuget](https://www.nuget.org/packages/VPet-Simulator.Core)内置到你的WPF应用程序
+---
 
-## 虚拟桌宠模拟器 详细介绍
+## 📖 文档导航
 
-虚拟桌宠模拟器是一款桌宠软件,支持各种互动投喂等. 开源免费并且支持创意工坊.
+| 文档 | 内容 |
+|------|------|
+| **👉 [功能与特性完全指南（GUIDE.md）](./GUIDE.md)** | **这款桌宠的全部功能、使用教程、构建部署与问题排查** |
+| [二次开发支持文档](./Secondary%20Development%20Support%20Documentation.md) | MOD 与代码插件开发 |
+| [上游原版文档](./README_zht.md) | [繁體中文](./README_zht.md) · [English](./README_en.md) · [日本語](./README_ja.md) |
 
-反正免费为啥不试试呢(
+---
 
-该游戏为 [虚拟主播模拟器](https://store.steampowered.com/app/1352140/_/) 内置桌宠(教程)程序独立而来, 如果喜欢的话欢迎添加 [虚拟主播模拟器](https://store.steampowered.com/app/1352140/_/) 至愿望单
+## ✨ 它都能做什么
 
-### 超多的互动和动画
+### 一只真正的桌面伙伴
 
-多达 32(种) * 4(状态) * 3(类型) 种动画, *注:部分种类没有生病状态或循环等内容,实际动画数量会偏少*
+- 常驻桌面、无边框透明、不打扰工作；会自己散步、趴在屏幕边缘探头、发呆、睡觉
+- 完整的养成数值：饱食度、口渴度、心情、体力、健康、金钱、经验等级、好感度
+- 投喂（食物/饮料/药品/礼品）、打工赚钱、学习升级、玩耍睡觉
+- 数十种动作动画，会随状态（正常/开心/状态不佳/生病）呈现不同表现
+- 多存档、快捷键、托盘管理、图库收藏、生日惊喜
 
-#### 一些动画例子:
+### 本版本的特色能力
 
-##### 摸头
+- 🤖 **AI 智能聊天**——接入任意 OpenAI 兼容大模型（智谱 / DeepSeek / OpenAI / 商汤 SenseNova…），给它性格人设，它知道自己饿不饿、心情好不好，像真正的伙伴一样和你对话
+- 📝 **任务清单管家**——本日 / 本周 / 本月待办，勾选完成；每天 **8 点提醒当天任务、14 点催你完成、20 点汇报完成情况**
+- 🗑 **拖拽删除文件**——把不想要的文件拖到桌宠身上，确认后彻底删除，桌面清理从未如此解压
+- 💬 **右键气泡菜单**——在桌宠身边弹出气泡式功能菜单，比传统菜单更直观可爱
+- 🖐 **顺滑的拖动与触碰**——全身任意点可拖、1:1 跟手不跳变；悬停头/腰/腿有不同触碰反应
+- 🛡 **防走丢保护**——桌宠行走/拖动智能限制在屏幕内，再也不会"跑丢"
 
-![ss0](README.assets/ss0.gif)
+> 每个功能的详细用法、配置教程与常见问题，见 **[GUIDE.md](./GUIDE.md)**。
 
-##### 提起
+### 无限扩展
 
-![ss4](README.assets/ss4.gif)![ss4](README.assets/ss8.gif)
+动画角色、物品、工作、台词、主题、语言、代码插件——全部可以通过 MOD 替换与添加，也可以在创意工坊分享与订阅。想让桌宠变成你自己的角色？换一套动画包即可。
 
-##### 爬墙
+---
 
-![ss7](README.assets/ss7.gif)
+## 🚀 快速开始
 
-### 免费
+**环境要求**：Windows 10/11（x64）+ [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)（`winget install Microsoft.DotNet.SDK.10`）
 
-该游戏完全免费! 反正不要钱,试试不要紧(<br/>
-该游戏主要目的是宣传下 [虚拟主播模拟器](https://store.steampowered.com/app/1352140/_/), 这是虚拟主播模拟器里面的桌宠.
+```bash
+# 构建主程序
+dotnet build "VPet-Simulator.Windows/VPet-Simulator.Windows.csproj" -c Debug -p:Platform=x64
 
-### 开源
+# 构建 AI 聊天插件（自动部署到 mod 目录）
+dotnet build "VPet.Plugin.AITalk/VPet.Plugin.AITalk.csproj" -c Debug
 
-该游戏在github上开源, 欢迎提出自己的想法,创意或者参与开发!<br/>
-您还可以修改代码来制作自己专属的桌宠!(虽然说大部分内容都支持创意工坊,不需要修改代码)<br/>
-项目地址: https://github.com/LorisYounger/VPet
+# 运行
+./VPet-Simulator.Windows/bin/x64/Debug/net10.0-windows7.0/VPet-Simulator.Windows.exe
+```
 
-### 支持创意工坊
+详细构建说明、MOD 目录链接方式（`mklink`）与插件加载规则见 [GUIDE.md 第七章](./GUIDE.md#七构建运行与部署)。
 
-该游戏支持创意工坊,您可以制作别的人物桌宠动画或者互动,并上传至创意工坊分享给更多人使用.
+---
 
-MOD制作器:  https://github.com/LorisYounger/VPet.ModMaker
+## 📂 数据与日志
 
-创意工坊支持添加/修改以下内容
+| 文件 | 位置 | 说明 |
+|------|------|------|
+| `Tasks.json` | 程序目录 | 任务清单与提醒记录 |
+| `Setting.lps` | 程序目录 | 设置（含 AI 配置） |
+| `Saves/` | 程序目录 | 游戏存档 |
+| `ai_talk.log` | `mod/1112_AITalk/` | AI 聊天日志（连接问题排查用） |
 
-* 桌宠动画
-* 物品/食物/饮料等
-* 自定义桌宠工作
-* 说话文本
-* 主题
-* 代码插件 - 通过编写代码给桌宠添加内容
-  * 添加新的动画逻辑/显示方案 (eg: l2d/spine 等)
-  * 添加新功能 (闹钟/记事板等等)
-  * 几乎无所不能, 示例例子参见 [VPet.Plugin.Demo](https://github.com/LorisYounger/VPet.Plugin.Demo)
+---
 
+## 开源声明与致谢
 
-### 反馈&建议&联系我们
+**本桌宠完全开源**，代码采用 [Apache License 2.0](./LICENSE)，任何人都可以自由使用、修改与分发。
 
-如果有建议或者意见,可以在Steam商店评论/社区,Github Issue,虚拟主播模拟器贴吧,虚拟桌宠模拟器MODDer群(907101442)或者邮件联系我 [mailto:service@exlb.net](mailto:service@exlb.net)
+这只桌宠**并非从零实现，而是在他人开源的桌宠代码基础上学习、修改而来**。在此郑重感谢：
 
-## 软件结构
+- 🙏 **特别感谢 [LorisYounger](https://github.com/LorisYounger)**——原版「虚拟桌宠模拟器 / 虚拟主播模拟器」的作者。本项目的核心玩法、养成系统、动画框架与 MOD 架构均源自他慷慨开源的 [VPet 项目](https://github.com/LorisYounger/VPet)。没有他的开源，就没有今天这只桌宠。
+- 感谢 [VPet 项目](https://github.com/LorisYounger/VPet) 的全体贡献者，以及创意工坊中分享内容的创作者们。
+- 感谢本项目所用开源组件的所有作者。
 
-* **VPet-Simulator.Windows: 适用于桌面端的虚拟桌宠模拟器**
-  * *Function 功能性代码存放位置*
-    * CoreMOD Mod管理类
-    * MWController 窗体控制器
-  
-  * *WinDesign 窗口和UI设计
-    * winBetterBuy 更好买窗口
-    * winCGPTSetting ChatGPT 设置
-    * winSetting 软件设置/MOD 窗口
-    * winConsole 开发控制台
-    * winGameSetting 游戏设置
-    * winReport 反馈中心
-  
-  * MainWindows 主窗体,存放和展示Core
-  * PetHelper 快速切换小标
-* **VPet-Simulator.Tool: 方便制作MOD的工具(eg:图片帧生成)**
-* **VPet-Simulator.Core: 软件核心 方便内置到任何WPF应用程序(例如:VUP-Simulator)**
-  * Handle 接口与控件
-    * IController 窗体控制器 (调用相关功能和设置,例如移动到侧边等)
-    * Function 通用功能
-    * GameCore 游戏核心,包含各种数据等内容
-    * GameSave 游戏存档
-    * IFood 食物/物品接口
-    * PetLoader 宠物图形加载器
-  * Graph 图形渲染
-    * IGraph 动画基本接口
-    * GraphCore 动画显示核心
-    * GraphHelper 动画帮助类
-    * GraphInfo 动画信息
-    * FoodAnimation 食物动画 支持显示前中后3层夹心动画 不一定只用于食物,只是叫这个名字
-    * PNGAnimation 桌宠动态动画组件
-    * Picture 桌宠静态动画组件
-  * Display 显示
-    * basestyle/Theme 基本风格主题
-    * Main.xaml 核心显示部件
-      * MainDisplay 核心显示方法
-      * MainLogic 核心显示逻辑
-    * ToolBar 点击人物时候的工具栏
-    * MessageBar 人物说话时候的说话栏
-    * WorkTimer 工作时钟
+> **版权与许可说明**：本仓库代码遵循 Apache License 2.0；仓库内自带的桌宠动画与图片素材来自上游项目，其版权归[虚拟主播模拟器制作组](https://www.exlb.net/VUP-Simulator)所有，使用与分发请遵守[上游动画版权声明与授权](https://github.com/LorisYounger/VPet#%E5%8A%A8%E7%94%BB%E7%89%88%E6%9D%83%E5%A3%B0%E6%98%8E%E4%B8%8E%E6%8E%88%E6%9D%83)。
 
-## 参与开发
+如果你喜欢这只桌宠，欢迎去给[原项目](https://github.com/LorisYounger/VPet)点一个 ⭐，或在 [Steam（免费）](https://store.steampowered.com/app/1920960/VPet) 支持原作者。
 
-欢迎参与虚拟桌宠模拟器的开发! 为保证代码可维护度和游戏性,如果想要开发新的功能,请先[邮件联系](mailto:zoujin.dev@exlb.org)或发[Issues](https://github.com/LorisYounger/VPet/issues)我想要添加的功能/玩法, 以确保该功能/玩法适用于虚拟桌宠模拟器. 以免未来提交时因不合适被拒(而造成代码浪费)<br/>
-如果是修复错误或者BUG,无需联系我,修好后直接PR即可
+---
 
-当想法通过后,您可以通过 [fork](https://github.com/LorisYounger/VPet/fork) 功能拷贝代码至自己的github以方便编写自己的代码, 编写完毕后通过[pull requests](https://github.com/LorisYounger/VPet/compare) 提交<br/>
-如果您想法没有被通过,也可以另起炉灶,写个不同版本功能的桌宠软件. 但需遵守 [Apache License 2.0](https://github.com/LorisYounger/VPet/blob/main/LICENSE) 与 [动画版权声明与授权](https://github.com/LorisYounger/VPet#%E5%8A%A8%E7%94%BB%E7%89%88%E6%9D%83%E5%A3%B0%E6%98%8E%E4%B8%8E%E6%8E%88%E6%9D%83)
-注: 一般来讲, 添加新功能都可以通过编写代码插件MOD实现, 详情请参见 [VPet.Plugin.Demo](https://github.com/LorisYounger/VPet.Plugin.Demo)
+## 上游资源
 
-我可能会对您的提交的代码进行修改,删减等以确保该功能/玩法适用于虚拟桌宠模拟器.
-
-
-感谢以下参与的开发和翻译人员
-
-<a href="https://github.com/LorisYounger/VPet/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=LorisYounger/VPet" />
-</a>
-
-和提供社区翻译和更多内容的创意工坊人员
-
-## 动画版权声明与授权
-
-在github中 [桌宠动画文件](https://github.com/LorisYounger/VPet/tree/main/VPet-Simulator.Windows/mod/0000_core/pet/vup) 动画版权归 [虚拟主播模拟器制作组](https://www.exlb.net/VUP-Simulator)所有, 当使用本类库时,您可能需要自行准备动画文件,或遵循以下协议
-
-> **注 **
-> 本动画声明仅限于桌宠自带的动画, 若有画师/开发者画自己的动画适配给桌宠,并不遵循用本声明
-
-### 非商用用途授权
-
-* 需要向用户告知动画文件来源并提供访问 [该页面](https://github.com/LorisYounger/VPet) 的链接
-* 当您完成以上要求后,您可以免费使用动画文件
-
-### 商用用途授权
-
-* 第一次使用时需弹窗并醒目的向用户告知动画文件来源并提供访问 [该页面](https://github.com/LorisYounger/VPet) 的链接
-* 在相应页面(用户可以快捷访问)向用户告知动画文件来源并提供访问 [该页面](https://github.com/LorisYounger/VPet) 的链接
-
-* 禁止通过出售动画文件进行盈利
-* 请[邮件联系](mailto:zoujin.dev@exlb.org)我
-* 当您完成以上要求后,您可以免费使用动画文件
-
-### 分发动画文件
-
-* 需要告知以上所有授权信息
-* 需要提供访问 [该页面](https://github.com/LorisYounger/VPet) 的链接
-* 分发动画文件时禁止任何付费/收费行为
-
-### 图片版权声明与授权
-
-* 程序内置图片 版权授权同上
-* Zip 照片图库禁止商用
-
-## 桌面端部署方法
-
-1. 下载本项目, 通过VisualStudio打开 `VPet.sln` 文件
-2. 在生成栏中, 选择 位数为 `x64` 和生成项目为 `Vpet-Simulator.Windows`
-   ![image-20230208004330895](README.assets/image-20230208004330895.png)
-3. 点击启动, 如果一切正常则会报错 `缺少模组Core,无法启动桌宠`
-4. 以管理员身份运行 `mklink.bat`, 这会让mod文件链接到生成位置
-5. 再次点击启动即可正常运行
+- 原项目仓库：<https://github.com/LorisYounger/VPet>
+- 原版 Steam 页面：<https://store.steampowered.com/app/1920960/VPet>
+- 原版文档：[繁體中文](./README_zht.md) · [English](./README_en.md) · [日本語](./README_ja.md)
