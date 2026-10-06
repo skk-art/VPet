@@ -3,3 +3,5 @@ obj/
 .vs/
 *.user
 *.suo
+flick_test.ps1
+*.log
