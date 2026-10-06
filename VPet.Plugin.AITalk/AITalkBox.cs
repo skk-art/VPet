@@ -34,6 +34,68 @@ namespace VPet.Plugin.AITalk
         {
             Timeout = TimeSpan.FromSeconds(90)
         };
+        /// <summary>
+        /// 直连客户端 (不走系统代理), 用于代理路径失败时自动重试
+        /// </summary>
+        private static readonly HttpClient clientNoProxy = new(new SocketsHttpHandler
+        {
+            UseProxy = false,
+            ConnectTimeout = TimeSpan.FromSeconds(30),
+        })
+        {
+            Timeout = TimeSpan.FromSeconds(90)
+        };
+
+        /// <summary>
+        /// 规范化API地址: 用户只填了域名或 /v1 等版本段时自动补全 /chat/completions
+        /// </summary>
+        public static string NormalizeUrl(string url)
+        {
+            var u = (url ?? "").Trim().TrimEnd('/');
+            if (u.Length == 0)
+                return u;
+            if (u.EndsWith("/chat/completions", StringComparison.OrdinalIgnoreCase))
+                return u;
+            if (System.Text.RegularExpressions.Regex.IsMatch(u, @"/v\d+[a-z]*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                return u + "/chat/completions";//形如 /v1 /v4 /v1beta 等版本段
+            try
+            {
+                var uri = new Uri(u);
+                if (string.IsNullOrEmpty(uri.AbsolutePath) || uri.AbsolutePath == "/")
+                    return u + "/v1/chat/completions";//只填了域名
+            }
+            catch { }
+            return u;
+        }
+        /// <summary>
+        /// 判断是否为网络层错误(可尝试换网络路径重试)
+        /// </summary>
+        private static bool IsNetworkError(Exception ex)
+        {
+            for (var e = ex; e != null; e = e.InnerException)
+            {
+                if (e is System.Net.Http.HttpRequestException || e is System.IO.IOException
+                    || e is System.Net.Sockets.SocketException || e is TaskCanceledException)
+                    return true;
+            }
+            return false;
+        }
+        /// <summary>
+        /// 发送请求: 默认走系统网络设置; 若失败(TLS/连接等网络问题)自动改用直连重试一次
+        /// (对开了代理但节点抖动/规则错误的环境特别有效)
+        /// </summary>
+        private static async Task<HttpResponseMessage> SendWithFallbackAsync(Func<HttpRequestMessage> makeRequest, HttpCompletionOption option, string tag)
+        {
+            try
+            {
+                return await client.SendAsync(makeRequest(), option);
+            }
+            catch (Exception ex) when (IsNetworkError(ex))
+            {
+                Log($"⚠ {tag} 系统网络路径失败({ex.GetType().Name}: {Truncate(ex.Message, 120)}), 改用直连重试");
+                return await clientNoProxy.SendAsync(makeRequest(), option);
+            }
+        }
 
         public AITalkBox(MainPlugin mainPlugin) : base(mainPlugin) { }
 
@@ -213,13 +275,20 @@ namespace VPet.Plugin.AITalk
                 temperature = 0.8,
                 max_tokens = 1200,
             };
-            Log($"→ 请求 {APIUrl} model={Model} key={Mask(APIKey)} max_tokens=1200 输入=\"{Truncate(text, 80)}\"");
-            using var request = new HttpRequestMessage(HttpMethod.Post, APIUrl);
-            request.Content = new StringContent(JsonSerializer.Serialize(req), Encoding.UTF8, "application/json");
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", APIKey);
-            request.Headers.TryAddWithoutValidation("Accept", "text/event-stream");
-
-            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            var url = NormalizeUrl(APIUrl);
+            if (!string.Equals(url, APIUrl.Trim(), StringComparison.OrdinalIgnoreCase))
+                Log($"地址自动补全: {APIUrl} → {url}");
+            Log($"→ 请求 {url} model={Model} key={Mask(APIKey)} max_tokens=1200 输入=\"{Truncate(text, 80)}\"");
+            HttpResponseMessage response = await SendWithFallbackAsync(() =>
+            {
+                var r = new HttpRequestMessage(HttpMethod.Post, url);
+                r.Content = new StringContent(JsonSerializer.Serialize(req), Encoding.UTF8, "application/json");
+                r.Headers.Authorization = new AuthenticationHeaderValue("Bearer", APIKey);
+                r.Headers.TryAddWithoutValidation("Accept", "text/event-stream");
+                return r;
+            }, HttpCompletionOption.ResponseHeadersRead, "聊天请求");
+            using (response)
+            {
             var ctype = response.Content.Headers.ContentType?.MediaType ?? "(无)";
             Log($"← 响应 HTTP {(int)response.StatusCode} {response.StatusCode} Content-Type={ctype}");
             if (!response.IsSuccessStatusCode)
@@ -318,6 +387,7 @@ namespace VPet.Plugin.AITalk
                     say.UpdateAllText("……(接口返回成功但内容为空, 可能是模型只输出了思考内容或token不足)");
                     say.FinishGenerate();
                 }
+            }
             }
         }
 

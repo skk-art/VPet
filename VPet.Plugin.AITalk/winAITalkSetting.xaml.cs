@@ -26,6 +26,7 @@ namespace VPet.Plugin.AITalk
             ("智谱 GLM (有免费额度)", "https://open.bigmodel.cn/api/paas/v4/chat/completions", "glm-4-flash"),
             ("DeepSeek", "https://api.deepseek.com/chat/completions", "deepseek-chat"),
             ("OpenAI", "https://api.openai.com/v1/chat/completions", "gpt-4o-mini"),
+            ("商汤 SenseNova Token Plan", "https://token.sensenova.cn/v1/chat/completions", "sensenova-6.8-flash-lite"),
             ("商汤 SenseNova (兼容模式)", "https://api.sensenova.cn/compatible-mode/v1/chat/completions", "sensenova-6.7-flash-lite"),
             ("自定义 (仅切换不修改已填内容)", "", ""),
         };
@@ -152,12 +153,14 @@ namespace VPet.Plugin.AITalk
             => string.IsNullOrEmpty(s) ? "" : (s.Length <= n ? s : s.Substring(0, n) + "...");
 
         /// <summary>
-        /// 发送一条最简非流式请求验证配置
+        /// 发送一条最简非流式请求验证配置 (地址自动补全 + 代理失败自动直连重试)
         /// </summary>
         private async Task<string> TestRequestAsync()
         {
-            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
-            AITalkBox.Log($"测试连接 → {talkBox.APIUrl} model={talkBox.Model}");
+            var url = AITalkBox.NormalizeUrl(talkBox.APIUrl);
+            if (!string.Equals(url, talkBox.APIUrl.Trim(), StringComparison.OrdinalIgnoreCase))
+                AITalkBox.Log($"测试连接 地址自动补全: {talkBox.APIUrl} → {url}");
+            AITalkBox.Log($"测试连接 → {url} model={talkBox.Model}");
             var req = new
             {
                 model = talkBox.Model,
@@ -168,24 +171,61 @@ namespace VPet.Plugin.AITalk
                 stream = false,
                 max_tokens = 50,
             };
-            using var request = new HttpRequestMessage(HttpMethod.Post, talkBox.APIUrl);
-            request.Content = new StringContent(JsonSerializer.Serialize(req), Encoding.UTF8, "application/json");
-            request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", talkBox.APIKey);
-            using var response = await client.SendAsync(request);
-            var body = await response.Content.ReadAsStringAsync();
-            AITalkBox.Log($"测试连接 ← HTTP {(int)response.StatusCode} {response.ReasonPhrase}, 响应: {Truncate(body, 500)}");
-            if (!response.IsSuccessStatusCode)
-                throw new Exception($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}: {Truncate(body.Replace('\n', ' ').Replace('\r', ' '), 300)}");
-            using var doc = JsonDocument.Parse(body);
-            var root = doc.RootElement;
-            if (!root.TryGetProperty("choices", out var choices) || choices.ValueKind != JsonValueKind.Array || choices.GetArrayLength() == 0)
-                throw new Exception("响应中没有 choices 字段: " + Truncate(body, 300));
-            var c0 = choices[0];
-            if (c0.TryGetProperty("message", out var msg) && msg.TryGetProperty("content", out var mc))
-                return mc.GetString() ?? "(空)";
-            if (c0.TryGetProperty("text", out var t))
-                return t.GetString() ?? "(空)";
-            return "(无法识别的响应格式, 详情见日志)";
+            Func<HttpRequestMessage> makeRequest = () =>
+            {
+                var request = new HttpRequestMessage(HttpMethod.Post, url);
+                request.Content = new StringContent(JsonSerializer.Serialize(req), Encoding.UTF8, "application/json");
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", talkBox.APIKey);
+                return request;
+            };
+            using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
+            HttpResponseMessage response;
+            try
+            {
+                response = await client.SendAsync(makeRequest());
+            }
+            catch (Exception ex) when (IsNetworkError(ex))
+            {
+                AITalkBox.Log($"测试连接 系统网络路径失败({ex.GetType().Name}: {ex.Message}), 改用直连重试");
+                using var clientNoProxy = new HttpClient(new SocketsHttpHandler
+                {
+                    UseProxy = false,
+                    ConnectTimeout = TimeSpan.FromSeconds(20),
+                })
+                { Timeout = TimeSpan.FromSeconds(30) };
+                response = await clientNoProxy.SendAsync(makeRequest());
+            }
+            using (response)
+            {
+                var body = await response.Content.ReadAsStringAsync();
+                AITalkBox.Log($"测试连接 ← HTTP {(int)response.StatusCode} {response.ReasonPhrase}, 响应: {Truncate(body, 500)}");
+                if (!response.IsSuccessStatusCode)
+                    throw new Exception($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}: {Truncate(body.Replace('\n', ' ').Replace('\r', ' '), 300)}");
+                using var doc = JsonDocument.Parse(body);
+                var root = doc.RootElement;
+                if (!root.TryGetProperty("choices", out var choices) || choices.ValueKind != JsonValueKind.Array || choices.GetArrayLength() == 0)
+                    throw new Exception("响应中没有 choices 字段: " + Truncate(body, 300));
+                var c0 = choices[0];
+                if (c0.TryGetProperty("message", out var msg) && msg.TryGetProperty("content", out var mc))
+                    return mc.GetString() ?? "(空)";
+                if (c0.TryGetProperty("text", out var t))
+                    return t.GetString() ?? "(空)";
+                return "(无法识别的响应格式, 详情见日志)";
+            }
+        }
+
+        /// <summary>
+        /// 判断是否为网络层错误(可尝试直连重试)
+        /// </summary>
+        private static bool IsNetworkError(Exception ex)
+        {
+            for (var e = ex; e != null; e = e.InnerException)
+            {
+                if (e is System.Net.Http.HttpRequestException || e is System.IO.IOException
+                    || e is System.Net.Sockets.SocketException || e is TaskCanceledException)
+                    return true;
+            }
+            return false;
         }
     }
 }
