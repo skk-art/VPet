@@ -472,21 +472,7 @@ namespace VPet_Simulator.Core
                 {
                     if (m.MoveTimerSmartMove)
                     {
-                        switch (LocateType)
-                        {
-                            case DirectionType.Top:
-                                m.Core.Controller!.MoveWindows(0, -m.Core.Controller!.GetWindowsDistanceUp() / m.Core.Controller!.ZoomRatio - LocateLength);
-                                break;
-                            case DirectionType.Bottom:
-                                m.Core.Controller!.MoveWindows(0, m.Core.Controller!.GetWindowsDistanceDown() / m.Core.Controller!.ZoomRatio + LocateLength);
-                                break;
-                            case DirectionType.Left:
-                                m.Core.Controller!.MoveWindows(-m.Core.Controller!.GetWindowsDistanceLeft() / m.Core.Controller!.ZoomRatio - LocateLength, 0);
-                                break;
-                            case DirectionType.Right:
-                                m.Core.Controller!.MoveWindows(m.Core.Controller!.GetWindowsDistanceRight() / m.Core.Controller!.ZoomRatio + LocateLength, 0);
-                                break;
-                        }
+                        //原版此处会把窗口瞬间传送到目标边缘(视觉上像"卡bug消失"), 改为从当前位置平滑移动过去
                         m.MoveTimerPoint = new Point(SpeedX, SpeedY);
                         m.MoveTimer.Interval = Interval;
                         m.MoveTimer.Start();

@@ -2,8 +2,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:pu="https://opensource.panuon.com/wpf-ui" xmlns:local="clr-namespace:VPet.Plugin.AITalk"
-        Title="AI 聊天设置" Width="560" Height="520" WindowStartupLocation="CenterScreen"
-        mc:Ignorable="d" Background="{DynamicResource DARKPrimaryText}" FontSize="14" MinWidth="560" MinHeight="520">
+        Title="AI 聊天设置" Width="620" Height="600" WindowStartupLocation="CenterScreen"
+        mc:Ignorable="d" Background="{DynamicResource DARKPrimaryText}" FontSize="14" MinWidth="620" MinHeight="600">
     <Grid Margin="20,15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -25,42 +25,51 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <TextBlock Text="API 地址" VerticalAlignment="Center" Margin="0,4" />
-                <TextBox x:Name="TbUrl" Grid.Column="1" Margin="10,4,0,4" Padding="6,5"
+                <TextBlock Text="服务预设" VerticalAlignment="Center" Margin="0,4" />
+                <ComboBox x:Name="CbPreset" Grid.Column="1" Margin="10,4,0,4" Padding="6,5" Height="32"
+                        pu:ComboBoxHelper.CornerRadius="5" SelectionChanged="CbPreset_SelectionChanged"
+                        ToolTip="选择常用服务快速填入地址和模型, 密钥需自行填写" />
+                <TextBlock Grid.Row="1" Text="API 地址" VerticalAlignment="Center" Margin="0,4" />
+                <TextBox x:Name="TbUrl" Grid.Row="1" Grid.Column="1" Margin="10,4,0,4" Padding="6,5"
                         pu:TextBoxHelper.CornerRadius="5" pu:TextBoxHelper.Watermark="https://open.bigmodel.cn/api/paas/v4/chat/completions" />
-                <TextBlock Grid.Row="1" Text="API 密钥" VerticalAlignment="Center" Margin="0,4" />
-                <PasswordBox x:Name="PbKey" Grid.Row="1" Grid.Column="1" Margin="10,4,0,4" Padding="6,5"
+                <TextBlock Grid.Row="2" Text="API 密钥" VerticalAlignment="Center" Margin="0,4" />
+                <PasswordBox x:Name="PbKey" Grid.Row="2" Grid.Column="1" Margin="10,4,0,4" Padding="6,5"
                         pu:PasswordBoxHelper.CornerRadius="5" pu:PasswordBoxHelper.Watermark="在此填入你的 API Key" />
-                <TextBlock Grid.Row="2" Text="模型名称" VerticalAlignment="Center" Margin="0,4" />
-                <TextBox x:Name="TbModel" Grid.Row="2" Grid.Column="1" Margin="10,4,0,4" Padding="6,5"
-                        pu:TextBoxHelper.CornerRadius="5" pu:TextBoxHelper.Watermark="例如 glm-4-flash / gpt-4o-mini / deepseek-chat" />
-                <TextBlock Grid.Row="3" Text="记忆轮数" VerticalAlignment="Center" Margin="0,4" />
-                <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Margin="10,4,0,4">
+                <TextBlock Grid.Row="3" Text="模型名称" VerticalAlignment="Center" Margin="0,4" />
+                <TextBox x:Name="TbModel" Grid.Row="3" Grid.Column="1" Margin="10,4,0,4" Padding="6,5"
+                        pu:TextBoxHelper.CornerRadius="5" pu:TextBoxHelper.Watermark="例如 glm-4-flash / deepseek-chat / gpt-4o-mini" />
+                <TextBlock Grid.Row="4" Text="记忆轮数" VerticalAlignment="Center" Margin="0,4" />
+                <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Margin="10,4,0,4">
                     <Slider x:Name="SldHistory" Width="200" Maximum="30" Minimum="0"
                             Value="10" IsSnapToTickEnabled="True" TickFrequency="1" VerticalAlignment="Center" />
                     <TextBlock x:Name="TxtHistory" Text="10 轮" Margin="10,0,0,0" VerticalAlignment="Center" />
                 </StackPanel>
-                <CheckBox x:Name="CkbState" Grid.Row="4" Grid.Column="1" Margin="10,6,0,2"
+                <CheckBox x:Name="CkbState" Grid.Row="5" Grid.Column="1" Margin="10,6,0,2"
                         Content="聊天时让 AI 知道桌宠的实时状态 (心情/饱食/金钱/好感度等)" />
             </Grid>
             <TextBlock Text="角色人设 (系统提示词, 决定桌宠的性格与说话方式)" FontWeight="Bold" Margin="0,12,0,4"
                     Foreground="{DynamicResource DARKPrimary}" />
-            <TextBox x:Name="TbPersona" Height="110" TextWrapping="Wrap" AcceptsReturn="True"
+            <TextBox x:Name="TbPersona" Height="90" TextWrapping="Wrap" AcceptsReturn="True"
                     VerticalScrollBarVisibility="Auto" Padding="6,5" pu:TextBoxHelper.CornerRadius="5" />
         </StackPanel>
         <Grid Grid.Row="2" Margin="0,15,0,0">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Button x:Name="BtnTest" Grid.Column="1" Content="测试连接" Padding="15,6" Margin="0,0,10,0"
+            <Button x:Name="BtnLog" Grid.Column="0" Content="打开日志" Padding="15,6" Margin="0,0,10,0"
+                    pu:ButtonHelper.CornerRadius="5" Click="BtnLog_Click" Cursor="Hand"
+                    ToolTip="查看请求/响应详情, 无法接入时可据此排查" />
+            <Button x:Name="BtnTest" Grid.Column="2" Content="测试连接" Padding="15,6" Margin="0,0,10,0"
                     pu:ButtonHelper.CornerRadius="5" Click="BtnTest_Click" Cursor="Hand" />
-            <Button x:Name="BtnClear" Grid.Column="2" Content="清空对话记忆" Padding="15,6" Margin="0,0,10,0"
+            <Button x:Name="BtnClear" Grid.Column="3" Content="清空对话记忆" Padding="15,6" Margin="0,0,10,0"
                     pu:ButtonHelper.CornerRadius="5" Click="BtnClear_Click" Cursor="Hand" />
-            <Button x:Name="BtnSave" Grid.Column="3" Content="保存" Padding="20,6" Style="{DynamicResource ThemedButtonStyle}"
+            <Button x:Name="BtnSave" Grid.Column="4" Content="保存" Padding="20,6" Style="{DynamicResource ThemedButtonStyle}"
                     pu:ButtonHelper.CornerRadius="5" Click="BtnSave_Click" Cursor="Hand" />
         </Grid>
     </Grid>

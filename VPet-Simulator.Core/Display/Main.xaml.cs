@@ -409,9 +409,19 @@ namespace VPet_Simulator.Core
         public Action? DefaultPressAction;
         public bool isPress = false;
         long presstime;
+        /// <summary>
+        /// 按下位置 (MainGrid设计坐标), 用于快速拖动判定
+        /// </summary>
+        private Point PressDownPoint;
+        /// <summary>
+        /// 本次按下是否已经进入拖动状态 (快速拖动或长按拖动)
+        /// </summary>
+        private bool dragStarted = false;
         private void MainGrid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             isPress = true;
+            dragStarted = false;
+            PressDownPoint = e.GetPosition(MainGrid);
             CountNomal = 0;
             BubbleMenu?.Hide();
             Task.Run(() =>
@@ -422,6 +432,8 @@ namespace VPet_Simulator.Core
                 Point mp = default;
                 Dispatcher.BeginInvoke(new Action(() => mp = Mouse.GetPosition(MainGrid))).Wait();
                 //mp = new Point(mp.X * Core.Controller!.ZoomRatio, mp.Y * Core.Controller!.ZoomRatio);
+                if (dragStarted)
+                    return;//已经通过快速移动进入拖动, 不再处理长按/点击
                 if (isPress && presstime == pth)
                 {//历遍长按事件
                     LastInteractionTime = DateTime.Now;
@@ -432,6 +444,7 @@ namespace VPet_Simulator.Core
                     }
                     //全身任意点长按均可拖动 (抓取点跟随模式, 不对齐RaisePoint不跳变)
                     //若插件注册了默认长按事件则优先调用
+                    dragStarted = true;
                     if (DefaultPressAction != null)
                         DefaultPressAction?.Invoke();
                     else
@@ -555,7 +568,20 @@ namespace VPet_Simulator.Core
         private void MainGrid_MouseWave(object sender, MouseEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                //快速拖动: 按下后移动超过阈值立即进入拖动, 无需等待长按
+                if (isPress && !dragStarted)
+                {
+                    var pp = e.GetPosition(MainGrid);
+                    if (Math.Abs(pp.X - PressDownPoint.X) + Math.Abs(pp.Y - PressDownPoint.Y) > 10)
+                    {
+                        dragStarted = true;
+                        LastInteractionTime = DateTime.Now;
+                        DisplayRaised();
+                    }
+                }
                 return;
+            }
             isPress = false;
             if (rasetype >= 0 || State != WorkingState.Nomal)
                 return;

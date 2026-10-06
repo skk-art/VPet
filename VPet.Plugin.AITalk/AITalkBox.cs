@@ -1,10 +1,12 @@
 using LinePutScript;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -34,6 +36,34 @@ namespace VPet.Plugin.AITalk
         };
 
         public AITalkBox(MainPlugin mainPlugin) : base(mainPlugin) { }
+
+        #region 日志
+        /// <summary>
+        /// 日志文件路径 (MOD目录下 ai_talk.log, 用于排查接入问题)
+        /// </summary>
+        public static string LogPath
+        {
+            get
+            {
+                var dllDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".";
+                return Path.GetFullPath(Path.Combine(dllDir, "..", "ai_talk.log"));
+            }
+        }
+        /// <summary>
+        /// 写入排查日志
+        /// </summary>
+        public static void Log(string msg)
+        {
+            try
+            {
+                File.AppendAllText(LogPath, $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] {msg}\n");
+            }
+            catch { }
+        }
+        private static string Mask(string key)
+            => string.IsNullOrEmpty(key) ? "(未填写)" : key.Length <= 8 ? "****" : key.Substring(0, 4) + "****" + key.Substring(key.Length - 4);
+        private static string Truncate(string s, int n) => string.IsNullOrEmpty(s) ? "" : (s.Length <= n ? s : s.Substring(0, n) + "...");
+        #endregion
 
         #region 设置读写
         /// <summary>API 完整地址 (OpenAI 兼容 chat/completions)</summary>
@@ -136,12 +166,34 @@ namespace VPet.Plugin.AITalk
             }
             catch (Exception e)
             {
-                Say($"呜... AI 接口出错了: {e.Message}", true);
+                Log("通讯异常: " + e.ToString());
+                Say($"呜... AI 接口出错了: {FormatError(e)}", true);
             }
         }
 
         /// <summary>
+        /// 把异常整理成用户能看懂的中文提示 (含常见原因判断)
+        /// </summary>
+        private static string FormatError(Exception e)
+        {
+            if (e is TaskCanceledException || e is OperationCanceledException)
+                return "请求超时(90秒), 请检查网络是否可访问接口地址";
+            var all = new List<string>();
+            for (var x = e; x != null; x = x.InnerException)
+                all.Add(x.Message);
+            var s = string.Join(" <- ", all.Distinct());
+            if (s.Contains("No such host is known") || s.Contains("nodename nor servname"))
+                s = "域名无法解析(请检查 API 地址是否写错, 或本机 DNS/代理问题)";
+            else if (s.Contains("Connection refused") || s.Contains("actively refused"))
+                s = "目标拒绝连接(请检查 API 地址和端口是否正确)";
+            else if (s.Contains("SSL") || s.Contains("TLS") || s.Contains("certificate"))
+                s = "TLS/证书握手失败(如有代理软件请确认其正常工作)";
+            return Truncate(s, 220) + " — 详情见日志 ai_talk.log";
+        }
+
+        /// <summary>
         /// 调用 Chat Completions 接口 (SSE流式), 桌宠边思考边打字机式说话
+        /// 兼容: 非流式响应回退解析 / 推理模型的 reasoning 增量 / choices为空的usage事件
         /// </summary>
         private async Task ChatStreamAsync(string text)
         {
@@ -159,12 +211,23 @@ namespace VPet.Plugin.AITalk
                 messages = messages.Select(m => new { role = m.role, content = m.content }),
                 stream = true,
                 temperature = 0.8,
-                max_tokens = 300,
+                max_tokens = 1200,
             };
+            Log($"→ 请求 {APIUrl} model={Model} key={Mask(APIKey)} max_tokens=1200 输入=\"{Truncate(text, 80)}\"");
             using var request = new HttpRequestMessage(HttpMethod.Post, APIUrl);
             request.Content = new StringContent(JsonSerializer.Serialize(req), Encoding.UTF8, "application/json");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", APIKey);
             request.Headers.TryAddWithoutValidation("Accept", "text/event-stream");
+
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
+            var ctype = response.Content.Headers.ContentType?.MediaType ?? "(无)";
+            Log($"← 响应 HTTP {(int)response.StatusCode} {response.StatusCode} Content-Type={ctype}");
+            if (!response.IsSuccessStatusCode)
+            {
+                var err = await response.Content.ReadAsStringAsync();
+                Log("← 错误响应体: " + Truncate(err, 800));
+                throw new Exception($"HTTP {(int)response.StatusCode} {response.ReasonPhrase}: {Truncate(err.Replace('\n', ' ').Replace('\r', ' '), 240)}");
+            }
 
             var say = new SayInfoWithStream("say", true);
             var replyBuilder = new StringBuilder();
@@ -180,40 +243,105 @@ namespace VPet.Plugin.AITalk
             };
             DisplayThinkToSayRnd(say);
 
-            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-            if (!response.IsSuccessStatusCode)
+            //服务端忽略 stream=true 时返回普通 JSON, 走非流式回退
+            if (!ctype.Contains("event-stream") && !ctype.Contains("stream"))
             {
-                var err = await response.Content.ReadAsStringAsync();
-                throw new Exception($"HTTP {(int)response.StatusCode}: {Truncate(err.Replace('\n', ' '), 120)}");
-            }
-            using var stream = await response.Content.ReadAsStreamAsync();
-            using var reader = new StreamReader(stream);
-            while (!reader.EndOfStream)
-            {
-                var line = await reader.ReadLineAsync();
-                if (string.IsNullOrEmpty(line) || !line.StartsWith("data:"))
-                    continue;
-                var data = line.Substring(5).Trim();
-                if (data == "[DONE]")
-                    break;
-                try
+                var body = await response.Content.ReadAsStringAsync();
+                Log($"非流式响应体({ctype}): " + Truncate(body, 1000));
+                var content = TryParseFullContent(body);
+                if (string.IsNullOrWhiteSpace(content))
                 {
-                    using var doc = JsonDocument.Parse(data);
-                    var delta = doc.RootElement.GetProperty("choices")[0].GetProperty("delta");
-                    if (delta.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.String)
+                    say.UpdateAllText("......");
+                    say.FinishGenerate();
+                    Log("✗ 非流式响应无法解析出回复内容");
+                    return;
+                }
+                say.UpdateAllText(content);
+                say.FinishGenerate();
+                Log($"✓ 非流式解析成功, 回复{content.Length}字");
+                return;
+            }
+
+            using (var stream = await response.Content.ReadAsStreamAsync())
+            using (var reader = new StreamReader(stream))
+            {
+                int parsed = 0, skipped = 0;
+                string? firstBad = null;
+                while (!reader.EndOfStream)
+                {
+                    var line = await reader.ReadLineAsync();
+                    if (line == null)
+                        break;
+                    if (line.Length == 0 || !line.StartsWith("data:"))
+                        continue;
+                    var data = line.Substring(5).Trim();
+                    if (data == "[DONE]")
+                        break;
+                    try
                     {
-                        var piece = content.GetString();
-                        if (!string.IsNullOrEmpty(piece))
-                            say.UpdateText(replyBuilder.Append(piece).ToString());
+                        using var doc = JsonDocument.Parse(data);
+                        var root = doc.RootElement;
+                        if (!root.TryGetProperty("choices", out var choices) || choices.ValueKind != JsonValueKind.Array || choices.GetArrayLength() == 0)
+                        {//usage事件(choices为空)等, 正常跳过
+                            skipped++;
+                            continue;
+                        }
+                        var choice = choices[0];
+                        if (!choice.TryGetProperty("delta", out var delta) || delta.ValueKind != JsonValueKind.Object)
+                        {
+                            skipped++;
+                            continue;
+                        }
+                        if (delta.TryGetProperty("content", out var content) && content.ValueKind == JsonValueKind.String)
+                        {
+                            var piece = content.GetString();
+                            if (!string.IsNullOrEmpty(piece))
+                            {
+                                replyBuilder.Append(piece);
+                                say.UpdateText(replyBuilder.ToString());
+                            }
+                        }
+                        //推理模型的 reasoning/reasoning_content 增量: 忽略不计入正文
+                        parsed++;
+                    }
+                    catch (JsonException)
+                    {
+                        skipped++;
+                        firstBad ??= data;
                     }
                 }
-                catch { }
-            }
-            say.FinishGenerate();
-            if (replyBuilder.Length == 0)
-            {
-                say.UpdateAllText("......");
                 say.FinishGenerate();
+                Log($"✓ 流式完成: 正文{replyBuilder.Length}字, 解析{parsed}条, 跳过{skipped}条"
+                    + (firstBad != null ? $", 首个无法解析数据: {Truncate(firstBad, 200)}" : ""));
+                if (replyBuilder.Length == 0)
+                {
+                    say.UpdateAllText("……(接口返回成功但内容为空, 可能是模型只输出了思考内容或token不足)");
+                    say.FinishGenerate();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 尝试从非流式响应体中解析回复内容 (兼容 choices[0].message.content / choices[0].text)
+        /// </summary>
+        private static string? TryParseFullContent(string body)
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(body);
+                var choices = doc.RootElement.GetProperty("choices");
+                if (choices.GetArrayLength() == 0)
+                    return null;
+                var c0 = choices[0];
+                if (c0.TryGetProperty("message", out var msg) && msg.TryGetProperty("content", out var mc) && mc.ValueKind == JsonValueKind.String)
+                    return mc.GetString();
+                if (c0.TryGetProperty("text", out var t) && t.ValueKind == JsonValueKind.String)
+                    return t.GetString();
+                return null;
+            }
+            catch
+            {
+                return null;
             }
         }
 
@@ -225,17 +353,31 @@ namespace VPet.Plugin.AITalk
             MainPlugin.MW.Dispatcher.Invoke(() => MainPlugin.MW.Main.SayRnd(text, force));
         }
 
-        private static string Truncate(string s, int n) => s.Length <= n ? s : s.Substring(0, n) + "...";
-
         public override void Setting()
         {
-            MainPlugin.MW.Dispatcher.Invoke(() =>
+            try
             {
-                var win = new winAITalkSetting(this) { Owner = null };
-                win.Topmost = true;
-                win.Show();
-                win.Activate();
-            });
+                MainPlugin.MW.Dispatcher.Invoke(() =>
+                {
+                    try
+                    {
+                        var win = new winAITalkSetting(this) { Owner = null };
+                        win.Topmost = true;
+                        win.Show();
+                        win.Activate();
+                        Log("设置窗口已打开");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log("打开设置窗口失败(UI线程): " + ex.ToString());
+                        System.Windows.MessageBox.Show("打开设置窗口失败:\n" + ex.Message + "\n\n日志: " + LogPath, "AI 聊天");
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Log("打开设置窗口失败(调度): " + ex.ToString());
+            }
         }
 
         /// <summary>
