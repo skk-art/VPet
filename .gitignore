@@ -10,3 +10,4 @@ VPet-Simulator.Windows/mod/1112_AITalk/AI_ChatHistory.json
 VPet-Simulator.Windows/mod/1112_AITalk/AI_Memories.json
 VPet-Simulator.Windows/mod/1112_AITalk/AI_Knowledge.txt
 open_toolbar.ps1
+release_pkg/
