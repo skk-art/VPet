@@ -47,6 +47,17 @@
 
 ## 🚀 快速开始
 
+### 普通用户：直接下载使用
+
+到 **[Releases 页面](https://github.com/skk-art/VPet/releases/latest)** 下载 **`standalone` 免安装版**压缩包（已内置 .NET 运行时）：
+
+1. 解压到任意普通文件夹，双击 `VPet-Simulator.Windows.exe` 即可（SmartScreen 提示选「仍要运行」）
+2. 打开 AI 聊天：设置 → MOD 启用 `AITalk` 代码插件并重启 → 在设置窗口填入自己的 API Key
+
+> 详细步骤见 [GUIDE.md 第〇章](./GUIDE.md#〇下载与安装)。
+
+### 开发者：从源码构建
+
 **环境要求**：Windows 10/11（x64）+ [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)（`winget install Microsoft.DotNet.SDK.10`）
 
 ```bash
